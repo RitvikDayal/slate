@@ -4,7 +4,10 @@ import { SYSTEM_PROMPTS } from "../ai/prompts";
 import { MORNING_PLAN_TOOLS } from "../ai/tool-definitions";
 import { trackUsage, checkBudget } from "../ai/usage-tracker";
 import { supabase } from "../lib/supabase";
-import type { MorningPlanJobData } from "@ai-todo/shared";
+import { scheduleTaskReminders } from "../services/reminder-scheduler";
+import { renderMorningPlanEmail } from "../services/email-templates";
+import { GoogleCalendarService, TokenRefreshError } from "../services/google-calendar";
+import type { MorningPlanJobData, ScheduleSlot } from "@ai-todo/shared";
 
 export async function processMorningPlan(job: Job<MorningPlanJobData>) {
   const { userId, date } = job.data;
@@ -19,9 +22,24 @@ export async function processMorningPlan(job: Job<MorningPlanJobData>) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("timezone, preferences")
+    .select("timezone, preferences, display_name")
     .eq("id", userId)
     .single();
+
+  // I3: Sync Google Calendar before generating schedule
+  try {
+    const calendarService = new GoogleCalendarService(supabase, userId);
+    const dayStart = new Date(`${date}T00:00:00Z`);
+    const dayEnd = new Date(`${date}T23:59:59Z`);
+    const syncResult = await calendarService.syncEvents(dayStart, dayEnd);
+    job.log(`Calendar synced: ${syncResult.synced} events, ${syncResult.deleted} removed`);
+  } catch (err) {
+    if (err instanceof TokenRefreshError) {
+      job.log(`Calendar sync skipped: ${err.message}`);
+    } else {
+      job.log(`Calendar sync failed (continuing without): ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
 
   const { data: tasks } = await supabase
     .from("tasks")
@@ -83,14 +101,69 @@ Please create an optimized daily schedule. First estimate any tasks missing dura
 
   await trackUsage(userId, result.inputTokens, result.outputTokens);
 
-  await supabase.from("notifications").insert({
-    user_id: userId,
-    channel: "in_app",
-    title: "Your day plan is ready!",
-    body: result.finalText.slice(0, 200),
-    ref_type: "schedule",
-    scheduled_for: new Date().toISOString(),
-  });
+  // I1: Wire notifications after schedule generation
+  const now = new Date().toISOString();
+
+  // Always create in_app + push notifications for the morning plan
+  await supabase.from("notifications").insert([
+    {
+      user_id: userId,
+      channel: "in_app" as const,
+      title: "Your day plan is ready!",
+      body: result.finalText.slice(0, 200),
+      ref_type: "schedule" as const,
+      scheduled_for: now,
+    },
+    {
+      user_id: userId,
+      channel: "push" as const,
+      title: "Your day plan is ready!",
+      body: result.finalText.slice(0, 200),
+      ref_type: "schedule" as const,
+      scheduled_for: now,
+    },
+  ]);
+
+  // Fetch the schedule that was just created to get slots
+  const { data: schedule } = await supabase
+    .from("daily_schedules")
+    .select("plan, ai_summary")
+    .eq("user_id", userId)
+    .eq("date", date)
+    .single();
+
+  const scheduleSlots = (schedule?.plan as ScheduleSlot[]) || [];
+
+  // Create email notification if user opted in
+  const emailEnabled = (profile?.preferences as Record<string, unknown> | null)?.email_morning_plan !== false;
+  if (emailEnabled) {
+    const summary = (schedule?.ai_summary as string) || result.finalText.slice(0, 200);
+    const userName = (profile?.display_name as string) || "";
+
+    const emailHtml = renderMorningPlanEmail(userName, date, scheduleSlots, summary);
+
+    await supabase.from("notifications").insert({
+      user_id: userId,
+      channel: "email" as const,
+      title: `Your morning plan for ${date}`,
+      body: emailHtml,
+      ref_type: "schedule" as const,
+      scheduled_for: now,
+    });
+  }
+
+  // Schedule task reminders for each task slot with a scheduled_start
+  for (const slot of scheduleSlots) {
+    if (slot.type === "task" && slot.ref_id && slot.start) {
+      await scheduleTaskReminders(
+        supabase,
+        userId,
+        slot.ref_id,
+        slot.title,
+        new Date(slot.start)
+      );
+    }
+  }
 
   job.log(
     `Morning plan complete. Tokens: ${result.inputTokens} in / ${result.outputTokens} out`

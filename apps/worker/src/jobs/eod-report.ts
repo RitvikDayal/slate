@@ -4,6 +4,7 @@ import { SYSTEM_PROMPTS } from "../ai/prompts";
 import { EOD_TOOLS } from "../ai/tool-definitions";
 import { trackUsage } from "../ai/usage-tracker";
 import { supabase } from "../lib/supabase";
+import { renderEodReportEmail } from "../services/email-templates";
 import type { EodReportJobData } from "@ai-todo/shared";
 
 export async function processEodReport(job: Job<EodReportJobData>) {
@@ -81,14 +82,42 @@ Please write a concise, encouraging summary.`;
     .select()
     .single();
 
+  // I2: Create in_app notification
   await supabase.from("notifications").insert({
     user_id: userId,
-    channel: "in_app",
-    title: "End-of-day report ready",
+    channel: "in_app" as const,
+    title: "Your daily report is ready",
     body: result.finalText.slice(0, 200),
-    ref_type: "report",
+    ref_type: "report" as const,
     scheduled_for: new Date().toISOString(),
   });
+
+  // I2: Create email notification if user opted in
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("display_name, preferences")
+    .eq("id", userId)
+    .single();
+
+  const emailEnabled = (profile?.preferences as Record<string, unknown> | null)?.email_eod_report !== false;
+  if (emailEnabled) {
+    const userName = (profile?.display_name as string) || "";
+    const emailHtml = renderEodReportEmail(userName, date, {
+      tasks_completed: completed.length,
+      tasks_pending: pending.length,
+      total_focus_minutes: focusMinutes,
+      ai_summary: result.finalText,
+    });
+
+    await supabase.from("notifications").insert({
+      user_id: userId,
+      channel: "email" as const,
+      title: `End-of-day report for ${date}`,
+      body: emailHtml,
+      ref_type: "report" as const,
+      scheduled_for: new Date().toISOString(),
+    });
+  }
 
   const tomorrow = new Date(date);
   tomorrow.setDate(tomorrow.getDate() + 1);
