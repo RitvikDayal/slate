@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { playCreate } from "@/lib/sounds";
 import { useItemStore } from "@/stores/item-store";
+import { useListStore } from "@/stores/list-store";
 import { DatePicker } from "@/components/date/date-picker";
 import type { ItemPriority } from "@ai-todo/shared";
 
@@ -30,9 +31,12 @@ export function QuickAdd({ listId, defaultDueDate }: QuickAddProps) {
   const [parsedDate, setParsedDate] = useState<string | null>(null);
   const [showPriority, setShowPriority] = useState(false);
   const [manualDate, setManualDate] = useState<string | null>(null);
+  const [selectedListId, setSelectedListId] = useState(listId);
+  const [showListPicker, setShowListPicker] = useState(false);
   const [justCreated, setJustCreated] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { createItem } = useItemStore();
+  const lists = useListStore((s) => s.lists);
 
   const parseInput = useCallback((text: string) => {
     setValue(text);
@@ -52,7 +56,7 @@ export function QuickAdd({ listId, defaultDueDate }: QuickAddProps) {
 
     try {
       await createItem({
-        list_id: listId,
+        list_id: selectedListId,
         title,
         type: "task",
         priority,
@@ -67,10 +71,11 @@ export function QuickAdd({ listId, defaultDueDate }: QuickAddProps) {
       setParsedDate(null);
       setManualDate(null);
       setShowPriority(false);
+      setSelectedListId(listId);
     } catch {
       // Silently fail — store handles errors
     }
-  }, [value, listId, priority, parsedDate, manualDate, createItem]);
+  }, [value, listId, selectedListId, priority, parsedDate, manualDate, createItem]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -231,14 +236,61 @@ export function QuickAdd({ listId, defaultDueDate }: QuickAddProps) {
                   </AnimatePresence>
                 </div>
 
-                {/* List selector placeholder */}
-                <button
-                  type="button"
-                  className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted"
-                  title="Move to list"
-                >
-                  <FolderOpen className="h-4 w-4" />
-                </button>
+                {/* List selector */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowListPicker(!showListPicker)}
+                    className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted"
+                    title="Move to list"
+                  >
+                    <FolderOpen className="h-4 w-4" />
+                  </button>
+                  <AnimatePresence>
+                    {showListPicker && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className="absolute bottom-full left-0 mb-1 max-h-48 w-48 overflow-y-auto rounded-lg border border-border bg-card p-1 shadow-lg"
+                      >
+                        {lists
+                          .filter((l) => !l.is_archived)
+                          .map((l) => (
+                            <button
+                              key={l.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedListId(l.id);
+                                setShowListPicker(false);
+                              }}
+                              className={cn(
+                                "flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors hover:bg-muted",
+                                selectedListId === l.id && "bg-muted"
+                              )}
+                            >
+                              {l.icon ? (
+                                <span className="text-sm">{l.icon}</span>
+                              ) : (
+                                <span
+                                  className="h-2 w-2 rounded-full"
+                                  style={{ backgroundColor: l.color || "var(--color-muted-foreground)" }}
+                                />
+                              )}
+                              <span className="truncate">{l.title}</span>
+                            </button>
+                          ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Selected list badge */}
+                {selectedListId !== listId && (
+                  <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                    {lists.find((l) => l.id === selectedListId)?.title}
+                  </span>
+                )}
 
                 <div className="flex-1" />
 
