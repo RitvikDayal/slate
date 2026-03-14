@@ -155,6 +155,60 @@ export interface Database {
           created_at?: string;
         };
       };
+      slack_task_suggestions: {
+        Relationships: [];
+        Row: {
+          id: string;
+          user_id: string;
+          channel_id: string;
+          channel_name: string;
+          message_ts: string;
+          message_text: string;
+          suggested_title: string;
+          suggested_priority: 'low' | 'medium' | 'high';
+          suggested_effort: 'xs' | 's' | 'm' | 'l' | 'xl' | null;
+          confidence: number;
+          reasoning: string;
+          status: 'pending' | 'accepted' | 'dismissed';
+          task_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          channel_id: string;
+          channel_name: string;
+          message_ts: string;
+          message_text: string;
+          suggested_title: string;
+          suggested_priority: 'low' | 'medium' | 'high';
+          confidence: number;
+          reasoning: string;
+          id?: string;
+          suggested_effort?: 'xs' | 's' | 'm' | 'l' | 'xl' | null;
+          status?: 'pending' | 'accepted' | 'dismissed';
+          task_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          channel_id?: string;
+          channel_name?: string;
+          message_ts?: string;
+          message_text?: string;
+          suggested_title?: string;
+          suggested_priority?: 'low' | 'medium' | 'high';
+          suggested_effort?: 'xs' | 's' | 'm' | 'l' | 'xl' | null;
+          confidence?: number;
+          reasoning?: string;
+          status?: 'pending' | 'accepted' | 'dismissed';
+          task_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       user_secrets: {
         Relationships: [];
         Row: {
@@ -200,6 +254,7 @@ export interface Database {
       notification_ref_type: 'task' | 'event' | 'schedule' | 'report';
       schedule_status: 'draft' | 'active' | 'completed';
       chat_role: 'user' | 'assistant';
+      slack_suggestion_status: 'pending' | 'accepted' | 'dismissed';
     };
   };
 }

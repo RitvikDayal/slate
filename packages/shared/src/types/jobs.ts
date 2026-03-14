@@ -12,6 +12,8 @@ export const JOB_NAMES = {
   AUTO_COMPLETE: "auto-complete",
   CALENDAR_SYNC: "calendar-sync",
   NOTIFICATION_DISPATCH: "notification-dispatch",
+  SLACK_SCAN: "slack-scan",
+  REPORT_INSIGHTS: "report-insights",
 } as const;
 
 export interface MorningPlanJobData {
@@ -50,4 +52,14 @@ export interface CalendarSyncJobData {
 
 export interface NotificationDispatchJobData {
   notificationIds: string[];
+}
+
+export interface SlackScannerJobData {
+  userId: string;
+}
+
+export interface ReportInsightsJobData {
+  userId: string;
+  startDate: string; // YYYY-MM-DD
+  endDate: string;
 }

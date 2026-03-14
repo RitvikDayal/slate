@@ -56,6 +56,33 @@ export function startCronScheduler() {
 
   minutelyCron.start();
   console.log("Cron scheduler started (every minute)");
+
+  // Slack scan cron — every 30 minutes
+  const slackScanCron = new CronJob("*/30 * * * *", async () => {
+    const { data: slackProfiles } = await supabase
+      .from("profiles")
+      .select("id, slack_channels")
+      .not("slack_channels", "is", null);
+
+    if (!slackProfiles) return;
+
+    for (const profile of slackProfiles) {
+      if (profile.slack_channels && profile.slack_channels.length > 0) {
+        await aiQueue.add(
+          JOB_NAMES.SLACK_SCAN,
+          { userId: profile.id },
+          {
+            jobId: `slack-scan-${profile.id}-${Date.now()}`,
+            attempts: 2,
+          }
+        );
+      }
+    }
+  });
+
+  slackScanCron.start();
+  console.log("Slack scan cron started (every 30 minutes)");
+
   return minutelyCron;
 }
 
