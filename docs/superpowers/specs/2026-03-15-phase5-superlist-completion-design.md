@@ -10,7 +10,7 @@
 
 Phases 1–4 of the AI Todo App are functionally complete: Supabase auth/schema, AI agent (Claude), Google Calendar sync, push notifications, Slack integration, and analytics/reports are all working.
 
-A Phase 5 "Superlist-inspired" data model redesign is in active but incomplete development. The new schema (`lists`, `items`, `labels`, `item_labels`) has been migrated. Stores, API routes, and core UI components have been built. However, significant gaps remain: placeholder buttons, a non-migrated Today page, an AI worker that still talks to the old `tasks` table, and offline sync infrastructure that is built but not wired up.
+A Phase 5 "Superlist-inspired" data model redesign is in active but incomplete development. The new schema (`lists`, `items`, `labels`, `item_labels`) has been migrated. Stores, API routes, and core UI components have been built. However, significant gaps remain: placeholder buttons, an AI worker that still talks to the old `tasks` table, and offline sync infrastructure that is built but not wired up.
 
 This spec covers all gaps required to make Phase 5 complete and shippable.
 
@@ -64,24 +64,13 @@ The `CalendarDays` button in the expanded toolbar renders but has no `onClick`. 
 
 The `FolderOpen` button is a visual placeholder — no `onClick` wired.
 
-- Add a `listSelectorOpen` boolean state
+- Add a `selectedListId` internal state (initialized from the `listId` prop)
 - On click, render a small popover dropdown listing all user lists (from `useListStore`)
-- Selecting a list overrides the `defaultListId` prop for the next created item
+- Selecting a list updates `selectedListId` state (does not change the prop)
+- Use `selectedListId` (not the prop directly) when calling `createItem`
 - Show the selected list name as a small badge next to the folder icon
-- Default to "Inbox" if none selected
 
-### 1.3 Migrate Today Page to Item Store
-
-**Files:** `apps/web/src/app/(dashboard)/today/page.tsx`, `apps/web/src/components/today/today-view.tsx`
-
-The Today page still renders the old `TodayView` from `components/today/`. That component references the old `tasks` table and `Task` type.
-
-- Call `useItemStore.fetchTodayItems()` (already implemented in the store) to load today's items
-- Replace the old task-card/timeline rendering with the new `TaskList` + `TaskItem` components for the task section
-- Preserve the schedule timeline (`ScheduleTimeline`) since it reads from `daily_schedules` which is unaffected by the data model change
-- Deprecate (but do not delete) the old `today/task-card.tsx`, `today/task-detail-dialog.tsx` — they can be removed in a future cleanup pass once the migration is confirmed stable
-
-### 1.4 Sidebar "New List" Handler
+### 1.3 Sidebar "New List" Handler
 
 **File:** `apps/web/src/components/layout/sidebar.tsx`
 
@@ -92,16 +81,7 @@ The "New List" button has no click handler.
 - On Enter or blur (with non-empty value), call `listStore.createList({ name })` and navigate to the new list
 - On Escape or blur (with empty value), cancel and remove the input
 
-### 1.5 Fix DetailPanel AnimatePresence
-
-**File:** `apps/web/src/components/layout/app-shell.tsx`
-
-`DetailPanel` is mounted/unmounted based on `detailPanelOpen` state, but the mount point is not wrapped in `AnimatePresence` from framer-motion, so enter/exit animations never fire.
-
-- Import `AnimatePresence` from `framer-motion` in `app-shell.tsx`
-- Wrap the `DetailPanel` render conditional in `<AnimatePresence>`
-
-### 1.6 Fix Command Palette Navigation
+### 1.4 Fix Command Palette Navigation
 
 **File:** `apps/web/src/components/search/command-palette.tsx`
 
@@ -115,6 +95,8 @@ List navigation uses `window.location.href` which causes a full page reload.
 ## Track 2: Power Features
 
 These features turn the app from functional into a pro-grade tool. Ordered by when a user encounters them in their workflow.
+
+**Note:** `app-shell.tsx` is owned by Track 2 (2.6 registers shortcuts there). No Track 1 items touch this file.
 
 ### 2.1 Label Management UI
 
@@ -165,12 +147,14 @@ The `label-store` is complete. There is no UI to create, edit, or assign labels.
 **Task list reordering:**
 - Wrap `TaskList` in `DndContext` + `SortableContext` from `@dnd-kit`
 - Each `TaskItem` uses `useSortable`; dragging renders a drag handle on hover (grip icon, appears on row hover)
-- On drag end, compute new `fractional-indexing` position values and call `itemStore.reorderItems`
-- Optimistic update in-store, revert on API failure (already handled by the store's reorder method)
+- On drag end, collect the new ordered array of item IDs and call `itemStore.reorderItems(listId, orderedIds)`
+- The `reorderItems` store method and `POST /api/items/reorder` route accept an ordered ID array and compute new position values server-side — `fractional-indexing` is used inside the API route, not on the client
+- Add optimistic reorder in the store: snapshot current order before calling the API; on API failure, revert to the snapshot (this revert logic needs to be written — it is **not** currently in the store)
 
 **Sidebar list reordering:**
 - Same pattern for the user lists section in the sidebar
-- On drag end, call `listStore.reorderLists`
+- On drag end, call `listStore.reorderLists(orderedIds)`
+- Same optimistic-with-revert pattern
 
 ### 2.4 Rich Editor Toolbar
 
@@ -178,10 +162,11 @@ The `label-store` is complete. There is no UI to create, edit, or assign labels.
 
 The Tiptap editor has no visible toolbar. Formatting requires slash commands or keyboard shortcuts only.
 
-- Add a floating toolbar that appears on text selection (using Tiptap's `BubbleMenu` extension)
+- Import `BubbleMenu` from `@tiptap/react` (already installed — no new dependency needed)
+- Add a `BubbleMenu` that appears on text selection
 - Toolbar buttons: Bold, Italic, Strike, Inline Code, Link, H1, H2, Bullet list, Ordered list
 - Use `editor.isActive()` for active state styling
-- Keep the editor area clean when nothing is selected (toolbar hidden)
+- Keep the editor area clean when nothing is selected (BubbleMenu is hidden automatically)
 
 ### 2.5 Time Picker
 
@@ -269,55 +254,74 @@ Currently queries `tasks`. After migration:
 
 After inserting into `items` and `item_labels`, the route returns the raw `items` row without re-fetching the labels join. The client store receives an item with no `labels` array.
 
-- After the insert, run a second query: `SELECT items.*, item_labels(*, labels(*)) FROM items WHERE id = $inserted_id`
+- After the insert, run a second Supabase query: `.from('items').select('*, item_labels(*, labels(*))').eq('id', insertedId).single()`
 - Return this complete object so the store hydrates correctly without a second round-trip
 
 ### 4.2 Wire Dexie into Item Store
 
 **Files:** `apps/web/src/stores/item-store.ts`, `apps/web/src/lib/db.ts`
 
-`db.ts` defines a complete Dexie schema for `LocalItem`, `LocalList`, `LocalLabel`. The stores currently bypass it entirely.
+`db.ts` defines a complete Dexie schema with `LocalItem`, `LocalList`, `LocalLabel` types. These use camelCase field names (`listId`, `parentItemId`, `isCompleted`, `dueDate`, `contentJson`) while the API `Item` type uses snake_case (`list_id`, `parent_item_id`, `is_completed`, `due_date`, `content_json`).
 
-- On `fetchItems`: after API response, bulk-upsert into `db.items`
-- On `createItem`: write to `db.items` first (optimistic), then POST to API; on failure, revert `db.items` entry
+**Required mapping layer:** Create a `toLocalItem(item: Item): LocalItem` function in `lib/db.ts` that maps snake_case API fields to camelCase local fields (and a symmetric `fromLocalItem` for reads). All Dexie reads/writes must go through this mapping layer.
+
+**Wiring:**
+- On `fetchItems`: after API response, bulk-upsert into `db.items` via `toLocalItem`
+- On `createItem`: write to `db.items` first (optimistic), then POST to API; on failure, remove the optimistic `db.items` entry
 - On `updateItem` / `deleteItem`: same optimistic local-first pattern
-- On app init (no network): read from `db.items` as the initial store state
+- On app init (no network / API error): read from `db.items` via `fromLocalItem` as the initial store state
 
 ### 4.3 Wire `sync.ts` and Start Listener
 
-**Files:** `apps/web/src/lib/sync.ts`, `apps/web/src/app/layout.tsx`
+**Files:** `apps/web/src/lib/sync.ts`, `apps/web/src/components/providers/sync-provider.tsx` (new), `apps/web/src/app/layout.tsx`
 
-`startSyncListener()` is implemented but never called.
+`startSyncListener()` is implemented but never called. `layout.tsx` is a Server Component and cannot use `useEffect` directly.
 
-- Call `startSyncListener()` in the root `layout.tsx` inside a `useEffect` (client component wrapper)
-- Ensure the listener is only started once (use a module-level flag in `sync.ts`)
+- Create `apps/web/src/components/providers/sync-provider.tsx` as a `"use client"` component:
+  ```tsx
+  "use client";
+  import { useEffect } from "react";
+  import { startSyncListener } from "@/lib/sync";
+  export function SyncProvider({ children }: { children: React.ReactNode }) {
+    useEffect(() => { startSyncListener(); }, []);
+    return <>{children}</>;
+  }
+  ```
+- Import `SyncProvider` in `apps/web/src/app/layout.tsx` and wrap the app tree with it
+- Ensure `startSyncListener` is idempotent — add a module-level `started` flag in `sync.ts` so it only registers listeners once even if called multiple times
 
-### 4.4 Fix `itemLabel` Sync Case
+### 4.4 Fix `itemLabel` Sync Case and Add Missing API Routes
 
-**File:** `apps/web/src/lib/sync.ts`
+**Files:** `apps/web/src/lib/sync.ts`, `apps/web/src/app/api/items/[id]/labels/route.ts` (new), `apps/web/src/app/api/items/[id]/labels/[labelId]/route.ts` (new)
 
-`SyncQueueEntry.entity` includes `'item_labels'` but the `syncEntry()` function has no case for it.
+The `SyncQueueEntry.entity` type in `db.ts` includes `"itemLabel"` (camelCase), but `syncEntry()` has no case for it. Additionally, the routes needed to sync label assignments don't exist yet.
 
-- Add a case for `'item_labels'` that handles create (POST `/api/items/[id]/labels`) and delete (DELETE `/api/items/[id]/labels/[labelId]`)
+**New API routes:**
+- `POST /api/items/[id]/labels` — body: `{ labelId: string }` — inserts a row into `item_labels`; validates ownership of both item and label via RLS
+- `DELETE /api/items/[id]/labels/[labelId]` — deletes the `item_labels` row; validates ownership via RLS
+
+**Sync fix:**
+- Add `case "itemLabel":` to `syncEntry()` in `sync.ts`
+  - For `create`: call `POST /api/items/[entityId]/labels` with `{ labelId: entry.data.labelId }`
+  - For `delete`: call `DELETE /api/items/[entityId]/labels/[entry.data.labelId]`
 
 ### 4.5 Error Boundaries
 
-**Files:** `apps/web/src/app/(dashboard)/` page files
+**File:** `apps/web/src/components/providers/view-error-boundary.tsx` (new)
 
 No React error boundaries exist around the main views.
 
-- Create a `ViewErrorBoundary` component (class component wrapping a fallback UI)
-- Wrap `InboxView`, `ListView`, `UpcomingView`, and `TodayView` render in `ViewErrorBoundary`
-- Fallback UI: simple message + "Reload" button
+- Create a `ViewErrorBoundary` class component with a `hasError` state flag and a fallback UI (brief message + "Reload" button that calls `window.location.reload()`)
+- Wrap `InboxView`, `ListView`, `UpcomingView`, and `TodayView` render in `<ViewErrorBoundary>`
 
 ### 4.6 Dead Code Cleanup
 
 - Remove unused `CheckCircle2` import from `apps/web/src/components/layout/sidebar.tsx`
-- Either integrate `@tiptap/extension-code-block-lowlight` into `rich-editor.tsx` (add code block support) or remove it from `package.json`
-- Wire `rrule` package into `RecurrencePicker` to parse/display custom RRULE strings, or remove from `package.json`
+- Either integrate `@tiptap/extension-code-block-lowlight` into `rich-editor.tsx` (add code block support to the editor) or remove it from `package.json`
+- Wire `rrule` package into `RecurrencePicker` to parse/display custom RRULE strings (e.g. show a human-readable label for externally-set custom rules), or remove from `package.json` if custom rules are out of scope
 - Update `CLAUDE.md` phase status: Phase 2 is complete (not "IN PROGRESS"); add Phase 5 as "IN PROGRESS"
-- Add ISO date format regex validation to `due_date` in `createItemSchema` in `packages/shared/src/validation/item.ts`
-- Add `recurrence_rule` to `createItemSchema` (currently only in `updateItemSchema`)
+- Add ISO date format regex validation to `due_date` in `createItemSchema`: `z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional()`
+- Add `recurrence_rule` field to `createItemSchema` (currently only in `updateItemSchema`)
 
 ---
 
@@ -326,12 +330,11 @@ No React error boundaries exist around the main views.
 Phase 5 is complete when:
 
 1. A user can open the app, see their Inbox, capture a task with a due date and label using QuickAdd, and have it appear correctly in Upcoming — all without page reloads or broken buttons
-2. The Today page shows items from the `items` table, not the old `tasks` table
-3. Subtasks render indented beneath their parent; the detail panel allows adding subtasks
-4. Items and lists can be reordered by dragging
-5. The AI assistant (chat + worker) creates and reads `items`/`lists`, not `tasks`
-6. The app loads from local Dexie cache when offline and syncs queued changes on reconnect
-7. No TypeScript errors; linter passes cleanly
+2. Subtasks render indented beneath their parent; the detail panel allows adding subtasks
+3. Items and lists can be reordered by dragging
+4. The AI assistant (chat + worker) creates and reads `items`/`lists`, not `tasks`
+5. The app loads from local Dexie cache when offline and syncs queued changes on reconnect — verified by: opening DevTools → Network → Offline, navigating to the app and confirming items render from cache, then toggling back Online and confirming queued changes drain (check `db.syncQueue` table count drops to 0 in the Dexie DevTools tab)
+6. No TypeScript errors (`pnpm turbo lint` passes); no unused imports or dead dependencies
 
 ---
 
@@ -339,10 +342,7 @@ Phase 5 is complete when:
 
 ### Track 1
 - `apps/web/src/components/tasks/quick-add.tsx`
-- `apps/web/src/app/(dashboard)/today/page.tsx`
-- `apps/web/src/components/today/today-view.tsx`
 - `apps/web/src/components/layout/sidebar.tsx`
-- `apps/web/src/components/layout/app-shell.tsx`
 - `apps/web/src/components/search/command-palette.tsx`
 
 ### Track 2
@@ -354,6 +354,7 @@ Phase 5 is complete when:
 - `apps/web/src/components/editor/rich-editor.tsx`
 - `apps/web/src/components/date/date-picker.tsx`
 - `apps/web/src/lib/shortcuts.ts`
+- `apps/web/src/components/layout/app-shell.tsx`
 
 ### Track 3
 - `packages/shared/src/types/supabase.ts`
@@ -365,8 +366,13 @@ Phase 5 is complete when:
 
 ### Track 4
 - `apps/web/src/app/api/items/route.ts`
+- `apps/web/src/app/api/items/[id]/labels/route.ts` *(new)*
+- `apps/web/src/app/api/items/[id]/labels/[labelId]/route.ts` *(new)*
 - `apps/web/src/stores/item-store.ts`
+- `apps/web/src/lib/db.ts`
 - `apps/web/src/lib/sync.ts`
+- `apps/web/src/components/providers/sync-provider.tsx` *(new)*
+- `apps/web/src/components/providers/view-error-boundary.tsx` *(new)*
 - `apps/web/src/app/layout.tsx`
 - `apps/web/src/components/layout/sidebar.tsx`
 - `apps/web/package.json`
