@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, CalendarDays, Flag, FolderOpen, Check, Tag } from "lucide-react";
 import * as chrono from "chrono-node";
@@ -41,6 +41,14 @@ export function QuickAdd({ listId, defaultDueDate }: QuickAddProps) {
   const { createItem } = useItemStore();
   const lists = useListStore((s) => s.lists);
   const { labels } = useLabelStore();
+
+  useEffect(() => {
+    function onFocusQuickAdd() {
+      inputRef.current?.focus();
+    }
+    window.addEventListener("focus-quick-add", onFocusQuickAdd);
+    return () => window.removeEventListener("focus-quick-add", onFocusQuickAdd);
+  }, []);
 
   const parseInput = useCallback((text: string) => {
     setValue(text);
