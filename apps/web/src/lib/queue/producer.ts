@@ -1,17 +1,17 @@
-import { Queue } from "bullmq";
+import { Queue, type ConnectionOptions } from "bullmq";
 import IORedis from "ioredis";
 import { QUEUE_NAMES } from "@ai-todo/shared";
 
 let connection: IORedis | null = null;
 
-function getConnection() {
+function getConnection(): ConnectionOptions {
   if (!connection) {
     connection = new IORedis(process.env.REDIS_URL!, {
       maxRetriesPerRequest: null,
       enableReadyCheck: false,
     });
   }
-  return connection;
+  return connection as unknown as ConnectionOptions;
 }
 
 export function getAiQueue() {
