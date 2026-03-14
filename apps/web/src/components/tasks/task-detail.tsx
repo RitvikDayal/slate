@@ -25,6 +25,10 @@ interface TaskDetailProps {
 
 export function TaskDetail({ item }: TaskDetailProps) {
   const updateItem = useItemStore((s) => s.updateItem);
+  const subtasks = useItemStore((s) =>
+    s.items.filter((i) => i.parent_item_id === item.id)
+  );
+  const toggleComplete = useItemStore((s) => s.toggleComplete);
   const labels = useLabelStore((s) => s.labels);
   const [title, setTitle] = useState(item.title);
   const [showPriorityMenu, setShowPriorityMenu] = useState(false);
@@ -218,6 +222,36 @@ export function TaskDetail({ item }: TaskDetailProps) {
         />
       </div>
 
+      {/* Subtasks */}
+      <div className="border-t border-border px-6 py-3">
+        <p className="mb-2 text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+          Subtasks
+        </p>
+        {subtasks.map((child) => (
+          <div key={child.id} className="flex items-center gap-2 py-1">
+            <button
+              type="button"
+              onClick={() => toggleComplete(child.id)}
+              className={cn(
+                "h-4 w-4 shrink-0 rounded border",
+                child.is_completed
+                  ? "border-success bg-success"
+                  : "border-border"
+              )}
+            />
+            <span
+              className={cn(
+                "text-sm",
+                child.is_completed && "text-muted-foreground line-through"
+              )}
+            >
+              {child.title}
+            </span>
+          </div>
+        ))}
+        <SubtaskInput parentId={item.id} listId={item.list_id} />
+      </div>
+
       {/* AI Notes (if any) */}
       {item.ai_notes && (
         <div className="border-t border-border px-6 py-3">
@@ -230,5 +264,39 @@ export function TaskDetail({ item }: TaskDetailProps) {
         </div>
       )}
     </div>
+  );
+}
+
+function SubtaskInput({
+  parentId,
+  listId,
+}: {
+  parentId: string;
+  listId: string;
+}) {
+  const [value, setValue] = useState("");
+  const createItem = useItemStore((s) => s.createItem);
+
+  return (
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onKeyDown={async (e) => {
+        if (e.key === "Enter" && value.trim()) {
+          await createItem({
+            list_id: listId,
+            parent_item_id: parentId,
+            title: value.trim(),
+            type: "task",
+            priority: "none",
+            source: "manual",
+          });
+          setValue("");
+        }
+      }}
+      placeholder="Add subtask..."
+      className="mt-1 w-full bg-transparent py-1 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
+    />
   );
 }
