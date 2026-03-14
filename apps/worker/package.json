@@ -9,10 +9,17 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@ai-todo/shared": "workspace:*"
+    "@ai-todo/shared": "workspace:*",
+    "@anthropic-ai/sdk": "^0.78.0",
+    "@supabase/supabase-js": "^2.99.1",
+    "bullmq": "^5.71.0",
+    "dotenv": "^17.3.1",
+    "ioredis": "^5.10.0"
   },
   "devDependencies": {
+    "@types/node": "^20.19.37",
     "tsx": "^4.19.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.4"
   }
 }
