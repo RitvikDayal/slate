@@ -1,0 +1,109 @@
+import { Job } from "bullmq";
+import { runAgent } from "../ai/agent";
+import { SYSTEM_PROMPTS } from "../ai/prompts";
+import { EOD_TOOLS } from "../ai/tool-definitions";
+import { trackUsage } from "../ai/usage-tracker";
+import { supabase } from "../lib/supabase";
+import type { EodReportJobData } from "@ai-todo/shared";
+
+export async function processEodReport(job: Job<EodReportJobData>) {
+  const { userId, date } = job.data;
+
+  const { data: allTasks } = await supabase
+    .from("tasks")
+    .select(
+      "id, title, status, priority, scheduled_start, scheduled_end, completed_at"
+    )
+    .eq("user_id", userId)
+    .eq("scheduled_date", date);
+
+  const tasks = allTasks || [];
+  const completed = tasks.filter((t: any) => t.status === "done");
+  const pending = tasks.filter(
+    (t: any) => t.status === "pending" || t.status === "in_progress"
+  );
+  const cancelled = tasks.filter((t: any) => t.status === "cancelled");
+
+  let focusMinutes = 0;
+  for (const t of completed) {
+    if (t.scheduled_start && t.scheduled_end) {
+      focusMinutes += Math.round(
+        (new Date(t.scheduled_end).getTime() -
+          new Date(t.scheduled_start).getTime()) /
+          60_000
+      );
+    }
+  }
+
+  const userMessage = `Generate an end-of-day report for ${date}.
+
+**Stats:**
+- Completed: ${completed.length} tasks
+- Pending: ${pending.length} tasks
+- Cancelled: ${cancelled.length} tasks
+- Total focus time: ${focusMinutes} minutes
+
+**Completed tasks:**
+${completed.map((t: any) => `- "${t.title}" (${t.priority})`).join("\n") || "None"}
+
+**Still pending:**
+${pending.map((t: any) => `- "${t.title}" (${t.priority})`).join("\n") || "None"}
+
+Please write a concise, encouraging summary.`;
+
+  const result = await runAgent({
+    userId,
+    systemPrompt: SYSTEM_PROMPTS.EOD_REPORTER,
+    userMessage,
+    tools: EOD_TOOLS,
+    maxTurns: 3,
+  });
+  await trackUsage(userId, result.inputTokens, result.outputTokens);
+
+  const { data: report } = await supabase
+    .from("daily_reports")
+    .upsert(
+      {
+        user_id: userId,
+        date,
+        tasks_completed: completed.length,
+        tasks_pending: pending.length,
+        tasks_cancelled: cancelled.length,
+        total_focus_minutes: focusMinutes,
+        ai_summary: result.finalText,
+        highlights: completed
+          .slice(0, 5)
+          .map((t: any) => ({ title: t.title, priority: t.priority })),
+        sent_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,date" }
+    )
+    .select()
+    .single();
+
+  await supabase.from("notifications").insert({
+    user_id: userId,
+    channel: "in_app",
+    title: "End-of-day report ready",
+    body: result.finalText.slice(0, 200),
+    ref_type: "report",
+    scheduled_for: new Date().toISOString(),
+  });
+
+  const tomorrow = new Date(date);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().split("T")[0];
+  for (const task of pending) {
+    await supabase
+      .from("tasks")
+      .update({
+        scheduled_date: tomorrowStr,
+        scheduled_start: null,
+        scheduled_end: null,
+        ai_notes: `Carried over from ${date}`,
+      })
+      .eq("id", task.id);
+  }
+
+  return { success: true, reportId: report?.id };
+}
