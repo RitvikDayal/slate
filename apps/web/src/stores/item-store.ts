@@ -7,6 +7,7 @@ import type {
   UpdateItemInput,
   MoveItemInput,
 } from "@ai-todo/shared";
+import { db, toLocalItem, fromLocalItem } from "@/lib/db";
 
 interface ItemStore {
   items: Item[];
@@ -32,35 +33,100 @@ export const useItemStore = create<ItemStore>((set, get) => ({
 
   fetchItemsByList: async (listId) => {
     set({ isLoading: true });
-    const res = await fetch(`/api/items?list_id=${listId}`);
-    if (res.ok) {
-      const items: Item[] = await res.json();
-      set({ items, isLoading: false });
-    } else {
-      set({ isLoading: false });
+    try {
+      const res = await fetch(`/api/items?list_id=${listId}`);
+      if (res.ok) {
+        const items: Item[] = await res.json();
+        set({ items, isLoading: false });
+        try {
+          await db.items.bulkPut(items.map(toLocalItem));
+        } catch {
+          // Dexie cache write is non-critical
+        }
+        return;
+      }
+    } catch {
+      // Network error — fall through to Dexie fallback
     }
+    try {
+      const cached = await db.items
+        .where("listId")
+        .equals(listId)
+        .toArray();
+      if (cached.length > 0) {
+        set({ items: cached.map((c) => fromLocalItem(c) as Item), isLoading: false });
+        return;
+      }
+    } catch {
+      // Dexie read is non-critical
+    }
+    set({ isLoading: false });
   },
 
   fetchTodayItems: async () => {
     set({ isLoading: true });
-    const res = await fetch("/api/views/today");
-    if (res.ok) {
-      const items: Item[] = await res.json();
-      set({ items, isLoading: false });
-    } else {
-      set({ isLoading: false });
+    try {
+      const res = await fetch("/api/views/today");
+      if (res.ok) {
+        const items: Item[] = await res.json();
+        set({ items, isLoading: false });
+        try {
+          await db.items.bulkPut(items.map(toLocalItem));
+        } catch {
+          // Dexie cache write is non-critical
+        }
+        return;
+      }
+    } catch {
+      // Network error — fall through to Dexie fallback
     }
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const cached = await db.items
+        .where("dueDate")
+        .equals(today)
+        .toArray();
+      if (cached.length > 0) {
+        set({ items: cached.map((c) => fromLocalItem(c) as Item), isLoading: false });
+        return;
+      }
+    } catch {
+      // Dexie read is non-critical
+    }
+    set({ isLoading: false });
   },
 
   fetchUpcomingItems: async () => {
     set({ isLoading: true });
-    const res = await fetch("/api/views/upcoming");
-    if (res.ok) {
-      const items: Item[] = await res.json();
-      set({ items, isLoading: false });
-    } else {
-      set({ isLoading: false });
+    try {
+      const res = await fetch("/api/views/upcoming");
+      if (res.ok) {
+        const items: Item[] = await res.json();
+        set({ items, isLoading: false });
+        try {
+          await db.items.bulkPut(items.map(toLocalItem));
+        } catch {
+          // Dexie cache write is non-critical
+        }
+        return;
+      }
+    } catch {
+      // Network error — fall through to Dexie fallback
     }
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const cached = await db.items
+        .where("dueDate")
+        .above(today)
+        .toArray();
+      if (cached.length > 0) {
+        set({ items: cached.map((c) => fromLocalItem(c) as Item), isLoading: false });
+        return;
+      }
+    } catch {
+      // Dexie read is non-critical
+    }
+    set({ isLoading: false });
   },
 
   createItem: async (data) => {
