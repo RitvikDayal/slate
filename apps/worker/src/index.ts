@@ -8,6 +8,7 @@ import { processEodReport } from "./jobs/eod-report";
 import { processSmartEstimate } from "./jobs/smart-estimate";
 import { processAutoComplete } from "./jobs/auto-complete";
 import { processSlackScan } from "./jobs/slack-scanner";
+import { processReportInsights } from "./jobs/report-insights";
 import { processCalendarSync } from "./jobs/calendar-sync";
 import { processNotificationDispatch } from "./jobs/notification-dispatcher";
 import { startCronScheduler } from "./cron/scheduler";
@@ -31,6 +32,8 @@ const aiWorker = new Worker(
         return processAutoComplete(job);
       case JOB_NAMES.SLACK_SCAN:
         return processSlackScan(job);
+      case JOB_NAMES.REPORT_INSIGHTS:
+        return processReportInsights(job);
       default:
         throw new Error(`Unknown job name: ${job.name}`);
     }

@@ -75,4 +75,9 @@ Messages that are NOT tasks:
 
 Be conservative — only flag messages with confidence >= 0.6.
 Use the analyze_message tool to return your analysis for each message.`,
+
+  REPORT_INSIGHTS: `You are an AI productivity coach analyzing task completion data.
+Provide concise, actionable insights. Be encouraging but honest.
+Use markdown formatting for readability.
+Always call save_insights to store your analysis.`,
 };
