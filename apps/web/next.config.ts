@@ -1,7 +1,12 @@
-import type { NextConfig } from "next";
+import withSerwistInit from "@serwist/next";
 
-const nextConfig: NextConfig = {
-  /* config options here */
+const withSerwist = withSerwistInit({
+  swSrc: "src/app/sw.ts",
+  swDest: "public/sw.js",
+});
+
+const nextConfig = {
+  transpilePackages: ["@ai-todo/shared"],
 };
 
-export default nextConfig;
+export default withSerwist(nextConfig);
