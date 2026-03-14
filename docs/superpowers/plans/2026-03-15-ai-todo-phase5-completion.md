@@ -449,10 +449,11 @@ git commit -m "feat: add label management UI in Settings"
 
 ---
 
-### Task 2.2: Label Assignment in TaskDetail
+### Task 2.2: Label Assignment in TaskDetail & QuickAdd
 
 **Files:**
 - Modify: `apps/web/src/components/tasks/task-detail.tsx`
+- Modify: `apps/web/src/components/tasks/quick-add.tsx`
 
 - [ ] **Step 1: Add label selector state and popover**
 
@@ -530,13 +531,119 @@ Replace the labels section (lines 134–151) with:
 </div>
 ```
 
-- [ ] **Step 3: Verify and commit**
+- [ ] **Step 3: Add label selector to QuickAdd toolbar**
+
+In `quick-add.tsx`, add label picker state and imports:
+
+```tsx
+// Add to imports:
+import { Tag } from "lucide-react";
+import { useLabelStore } from "@/stores/label-store";
+
+// Add to state:
+const [showLabelPicker, setShowLabelPicker] = useState(false);
+const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
+const { labels } = useLabelStore();
+```
+
+Add a label selector button to the expanded toolbar (after the list selector / FolderOpen button):
+
+```tsx
+{/* Label selector */}
+<div className="relative">
+  <button
+    type="button"
+    onClick={() => setShowLabelPicker(!showLabelPicker)}
+    className={cn(
+      "rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted",
+      selectedLabelIds.length > 0 && "text-primary"
+    )}
+    title="Add labels"
+  >
+    <Tag className="h-4 w-4" />
+  </button>
+  <AnimatePresence>
+    {showLabelPicker && (
+      <motion.div
+        initial={{ opacity: 0, y: -4 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -4 }}
+        className="absolute bottom-full left-0 z-50 mb-1 w-44 rounded-lg border border-border bg-popover p-1 shadow-lg"
+      >
+        {labels.map((label) => (
+          <button
+            key={label.id}
+            type="button"
+            onClick={() => {
+              setSelectedLabelIds((prev) =>
+                prev.includes(label.id)
+                  ? prev.filter((id) => id !== label.id)
+                  : [...prev, label.id]
+              );
+            }}
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-sm transition-colors hover:bg-muted"
+          >
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ backgroundColor: label.color }}
+            />
+            {label.name}
+            {selectedLabelIds.includes(label.id) && (
+              <span className="ml-auto text-primary">✓</span>
+            )}
+          </button>
+        ))}
+        {labels.length === 0 && (
+          <p className="px-2 py-1.5 text-xs text-muted-foreground">No labels</p>
+        )}
+      </motion.div>
+    )}
+  </AnimatePresence>
+</div>
+```
+
+Show selected labels as pills above the input (below the date badge area):
+
+```tsx
+{selectedLabelIds.length > 0 && (
+  <div className="flex flex-wrap gap-1">
+    {selectedLabelIds.map((id) => {
+      const label = labels.find((l) => l.id === id);
+      if (!label) return null;
+      return (
+        <span
+          key={id}
+          className="rounded-full px-2 py-0.5 text-[10px] font-medium"
+          style={{ backgroundColor: `${label.color}20`, color: label.color }}
+        >
+          {label.name}
+        </span>
+      );
+    })}
+  </div>
+)}
+```
+
+Pass `label_ids` in `handleSubmit`:
+
+```tsx
+label_ids: selectedLabelIds.length > 0 ? selectedLabelIds : undefined,
+```
+
+Reset after submit:
+
+```tsx
+setSelectedLabelIds([]);
+setShowLabelPicker(false);
+```
+
+- [ ] **Step 4: Verify and commit**
 
 Run: `npx tsc --noEmit -p apps/web/tsconfig.json`
 
 ```bash
-git add apps/web/src/components/tasks/task-detail.tsx
-git commit -m "feat: add interactive label assignment in TaskDetail"
+git add apps/web/src/components/tasks/task-detail.tsx apps/web/src/components/tasks/quick-add.tsx
+git commit -m "feat: add interactive label assignment in TaskDetail and QuickAdd"
 ```
 
 ---
@@ -697,6 +804,15 @@ Add indent via `style` on the outer div:
 
 In `task-detail.tsx`, after the rich editor section, add a subtasks section:
 
+Add to the component's hooks section (before the return):
+
+```tsx
+const subtasks = useItemStore((s) => s.getItemsByParent(item.id));
+const toggleComplete = useItemStore((s) => s.toggleComplete);
+```
+
+Then in the JSX:
+
 ```tsx
 {/* Subtasks */}
 <div className="border-t border-border px-6 py-3">
@@ -704,31 +820,28 @@ In `task-detail.tsx`, after the rich editor section, add a subtasks section:
     Subtasks
   </p>
   {/* Existing subtasks */}
-  {useItemStore
-    .getState()
-    .getItemsByParent(item.id)
-    .map((child) => (
-      <div key={child.id} className="flex items-center gap-2 py-1">
-        <button
-          type="button"
-          onClick={() => useItemStore.getState().toggleComplete(child.id)}
-          className={cn(
-            "h-4 w-4 shrink-0 rounded border",
-            child.is_completed
-              ? "border-success bg-success"
-              : "border-border"
-          )}
-        />
-        <span
-          className={cn(
-            "text-sm",
-            child.is_completed && "text-muted-foreground line-through"
-          )}
-        >
-          {child.title}
-        </span>
-      </div>
-    ))}
+  {subtasks.map((child) => (
+    <div key={child.id} className="flex items-center gap-2 py-1">
+      <button
+        type="button"
+        onClick={() => toggleComplete(child.id)}
+        className={cn(
+          "h-4 w-4 shrink-0 rounded border",
+          child.is_completed
+            ? "border-success bg-success"
+            : "border-border"
+        )}
+      />
+      <span
+        className={cn(
+          "text-sm",
+          child.is_completed && "text-muted-foreground line-through"
+        )}
+      >
+        {child.title}
+      </span>
+    </div>
+  ))}
   {/* Add subtask input */}
   <SubtaskInput parentId={item.id} listId={item.list_id} />
 </div>
@@ -778,11 +891,14 @@ git commit -m "feat: add subtask rendering and inline creation"
 
 ## Chunk 3: Track 2B — DnD, Editor, Time Picker, Shortcuts
 
-### Task 2.4: Drag-and-Drop Task Reordering
+### Task 2.4: Drag-and-Drop Task Reordering (with Sidebar List DnD)
 
 **Files:**
 - Modify: `apps/web/src/components/tasks/task-list.tsx`
 - Modify: `apps/web/src/components/tasks/task-item.tsx`
+- Modify: `apps/web/src/stores/item-store.ts`
+- Modify: `apps/web/src/stores/list-store.ts`
+- Modify: `apps/web/src/components/layout/sidebar.tsx`
 
 - [ ] **Step 1: Wrap TaskList with DndContext and SortableContext**
 
@@ -892,17 +1008,169 @@ Use `ref={setNodeRef}` on outer div, apply `sortStyle` via `style` prop. Add dra
 </button>
 ```
 
-- [ ] **Step 3: Pass listId to TaskList consumers**
+- [ ] **Step 3: Add optimistic revert to reorderItems in item-store.ts**
+
+In `item-store.ts`, update the `reorderItems` method (lines 132–148) to snapshot the current order before the API call and revert on failure:
+
+```tsx
+reorderItems: async (listId, orderedIds) => {
+  // Snapshot current state for revert
+  const prevItems = get().items;
+
+  // Optimistic update
+  set((state) => {
+    const itemMap = new Map(state.items.map((i) => [i.id, i]));
+    const reordered = orderedIds
+      .map((id) => itemMap.get(id))
+      .filter((i): i is Item => i !== undefined);
+    const remaining = state.items.filter(
+      (i) => i.list_id !== listId || !orderedIds.includes(i.id)
+    );
+    return { items: [...reordered, ...remaining] };
+  });
+
+  try {
+    const res = await fetch("/api/items/reorder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ list_id: listId, orderedIds }),
+    });
+    if (!res.ok) throw new Error("Reorder failed");
+  } catch {
+    // Revert on failure
+    set({ items: prevItems });
+  }
+},
+```
+
+- [ ] **Step 4: Add optimistic revert to reorderLists in list-store.ts**
+
+Apply the same snapshot-and-revert pattern to `reorderLists` in `list-store.ts`:
+
+```tsx
+reorderLists: async (orderedIds) => {
+  const prevLists = get().lists;
+
+  set((state) => {
+    const listMap = new Map(state.lists.map((l) => [l.id, l]));
+    const reordered = orderedIds
+      .map((id) => listMap.get(id))
+      .filter((l): l is List => l !== undefined);
+    const remaining = state.lists.filter((l) => !orderedIds.includes(l.id));
+    return { lists: [...reordered, ...remaining] };
+  });
+
+  try {
+    const res = await fetch("/api/lists/reorder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderedIds }),
+    });
+    if (!res.ok) throw new Error("Reorder failed");
+  } catch {
+    set({ lists: prevLists });
+  }
+},
+```
+
+- [ ] **Step 5: Pass listId to TaskList consumers**
 
 Grep for `<TaskList` usages and pass `listId` where available (inbox page, list page, today-view).
 
-- [ ] **Step 4: Verify and commit**
+- [ ] **Step 6: Add DnD list reordering to sidebar**
+
+In `sidebar.tsx`, wrap the user lists section with `DndContext` + `SortableContext` and make each list item sortable:
+
+```tsx
+// Add imports:
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import { GripVertical } from "lucide-react";
+
+// Inside Sidebar component:
+const sensors = useSensors(
+  useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+);
+
+function handleListDragEnd(event: DragEndEvent) {
+  const { active, over } = event;
+  if (!over || active.id === over.id) return;
+  const ids = lists.map((l) => l.id);
+  const oldIndex = ids.indexOf(active.id as string);
+  const newIndex = ids.indexOf(over.id as string);
+  if (oldIndex === -1 || newIndex === -1) return;
+  const newIds = [...ids];
+  newIds.splice(oldIndex, 1);
+  newIds.splice(newIndex, 0, active.id as string);
+  reorderLists(newIds);
+}
+```
+
+Wrap the user lists `<nav>` section:
+
+```tsx
+<DndContext
+  sensors={sensors}
+  collisionDetection={closestCenter}
+  modifiers={[restrictToVerticalAxis]}
+  onDragEnd={handleListDragEnd}
+>
+  <SortableContext items={lists.map((l) => l.id)} strategy={verticalListSortingStrategy}>
+    {lists.map((list) => (
+      <SortableListItem key={list.id} list={list} />
+    ))}
+  </SortableContext>
+</DndContext>
+```
+
+Create a `SortableListItem` sub-component inside the file:
+
+```tsx
+function SortableListItem({ list }: { list: List }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: list.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="group flex items-center">
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="flex h-4 w-4 shrink-0 cursor-grab items-center justify-center text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 active:cursor-grabbing"
+      >
+        <GripVertical className="h-3 w-3" />
+      </button>
+      {/* existing list link/button content */}
+    </div>
+  );
+}
+```
+
+- [ ] **Step 7: Verify and commit**
 
 Run: `npx tsc --noEmit -p apps/web/tsconfig.json`
 
 ```bash
-git add apps/web/src/components/tasks/task-list.tsx apps/web/src/components/tasks/task-item.tsx
-git commit -m "feat: add drag-and-drop task reordering with @dnd-kit"
+git add apps/web/src/components/tasks/task-list.tsx apps/web/src/components/tasks/task-item.tsx apps/web/src/stores/item-store.ts apps/web/src/stores/list-store.ts apps/web/src/components/layout/sidebar.tsx
+git commit -m "feat: add drag-and-drop task reordering with @dnd-kit and sidebar list DnD"
 ```
 
 ---
@@ -1121,15 +1389,6 @@ useEffect(() => {
     description: "New task",
   });
 
-  const unregK = registerShortcut({
-    key: "k",
-    meta: true,
-    handler: () => {
-      // CommandPalette already handles ⌘K internally
-    },
-    description: "Command palette",
-  });
-
   const unregE = registerShortcut({
     key: "e",
     handler: () => {
@@ -1153,7 +1412,6 @@ useEffect(() => {
   return () => {
     cleanup();
     unregN();
-    unregK();
     unregE();
     unregComma();
   };
@@ -1960,14 +2218,79 @@ git commit -m "feat: wire Dexie offline cache into item store"
 
 ---
 
-### Task 4.3: Wire Sync Listener
+### Task 4.3: Wire Sync Listener & Item Label API Routes
 
 **Files:**
+- Create: `apps/web/src/app/api/items/[id]/labels/route.ts`
+- Create: `apps/web/src/app/api/items/[id]/labels/[labelId]/route.ts`
 - Create: `apps/web/src/components/providers/sync-provider.tsx`
 - Modify: `apps/web/src/lib/sync.ts`
 - Modify: `apps/web/src/app/layout.tsx`
 
-- [ ] **Step 1: Add idempotency guard to startSyncListener**
+- [ ] **Step 1: Create POST /api/items/[id]/labels route**
+
+Create `apps/web/src/app/api/items/[id]/labels/route.ts`:
+
+```tsx
+import { NextResponse, type NextRequest } from "next/server";
+import { getAuthenticatedUser } from "@/lib/api/auth";
+import { createClient } from "@/lib/supabase/server";
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const user = await getAuthenticatedUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id: itemId } = await params;
+  let body: { labelId: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("item_labels")
+    .insert({ item_id: itemId, label_id: body.labelId });
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  return NextResponse.json({ ok: true }, { status: 201 });
+}
+```
+
+- [ ] **Step 2: Create DELETE /api/items/[id]/labels/[labelId] route**
+
+Create `apps/web/src/app/api/items/[id]/labels/[labelId]/route.ts`:
+
+```tsx
+import { NextResponse, type NextRequest } from "next/server";
+import { getAuthenticatedUser } from "@/lib/api/auth";
+import { createClient } from "@/lib/supabase/server";
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string; labelId: string }> }
+) {
+  const user = await getAuthenticatedUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id: itemId, labelId } = await params;
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("item_labels")
+    .delete()
+    .eq("item_id", itemId)
+    .eq("label_id", labelId);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  return NextResponse.json({ ok: true });
+}
+```
+
+- [ ] **Step 3: Add idempotency guard to startSyncListener**
 
 In `sync.ts`, add at the top of the file:
 
@@ -1986,7 +2309,7 @@ export function startSyncListener() {
 }
 ```
 
-- [ ] **Step 2: Add itemLabel sync case**
+- [ ] **Step 4: Add itemLabel sync case**
 
 In `syncEntry`, update the `entityMap` and add the itemLabel case:
 
@@ -2014,7 +2337,7 @@ async function syncEntry(entry: SyncQueueEntry) {
 }
 ```
 
-- [ ] **Step 3: Create SyncProvider**
+- [ ] **Step 5: Create SyncProvider**
 
 Create `apps/web/src/components/providers/sync-provider.tsx`:
 
@@ -2034,7 +2357,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 }
 ```
 
-- [ ] **Step 4: Wire SyncProvider into layout.tsx**
+- [ ] **Step 6: Wire SyncProvider into layout.tsx**
 
 The root layout is a Server Component. The `SyncProvider` must be added to the dashboard layout which is a Client Component, or wrapped in the body. Since `layout.tsx` is a server component, add the provider in the dashboard layout or create a client-side wrapper.
 
@@ -2056,12 +2379,12 @@ import { SyncProvider } from "@/components/providers/sync-provider";
 
 Note: `SyncProvider` is a `"use client"` component so it can be imported into a Server Component — it will be the client boundary.
 
-- [ ] **Step 5: Verify and commit**
+- [ ] **Step 7: Verify and commit**
 
 ```bash
 npx tsc --noEmit -p apps/web/tsconfig.json
-git add apps/web/src/lib/sync.ts apps/web/src/components/providers/sync-provider.tsx apps/web/src/app/layout.tsx
-git commit -m "feat: wire sync listener with SyncProvider and add itemLabel sync"
+git add apps/web/src/lib/sync.ts apps/web/src/components/providers/sync-provider.tsx apps/web/src/app/layout.tsx apps/web/src/app/api/items/\[id\]/labels/route.ts apps/web/src/app/api/items/\[id\]/labels/\[labelId\]/route.ts
+git commit -m "feat: wire sync listener, SyncProvider, itemLabel sync, and label API routes"
 ```
 
 ---
@@ -2168,7 +2491,20 @@ due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 recurrence_rule: z.string().optional(),
 ```
 
-- [ ] **Step 3: Update CLAUDE.md phase status**
+- [ ] **Step 3: Clean up unused packages**
+
+Check if `@tiptap/extension-code-block-lowlight` and `rrule` are used anywhere in the codebase. If not, remove them from `apps/web/package.json` and run `pnpm install`.
+
+```bash
+# Check usage:
+grep -r "code-block-lowlight" apps/web/src/ || echo "Not used"
+grep -r "rrule" apps/web/src/ || echo "Not used"
+
+# If unused, remove:
+cd apps/web && pnpm remove @tiptap/extension-code-block-lowlight rrule && cd ../..
+```
+
+- [ ] **Step 4: Update CLAUDE.md phase status**
 
 Change Phase 2 from "IN PROGRESS" to "DONE". Add Phase 5 entry:
 
@@ -2176,13 +2512,13 @@ Change Phase 2 from "IN PROGRESS" to "DONE". Add Phase 5 entry:
 - `2026-03-15-ai-todo-phase5-completion.md` — Phase 5 (IN PROGRESS)
 ```
 
-- [ ] **Step 4: Verify and commit**
+- [ ] **Step 5: Verify and commit**
 
 ```bash
 npx tsc --noEmit -p apps/web/tsconfig.json
 pnpm turbo lint
-git add apps/web/src/components/layout/sidebar.tsx packages/shared/src/validation/item.ts CLAUDE.md
-git commit -m "chore: dead code cleanup, schema fixes, update phase status"
+git add apps/web/src/components/layout/sidebar.tsx packages/shared/src/validation/item.ts CLAUDE.md apps/web/package.json pnpm-lock.yaml
+git commit -m "chore: dead code cleanup, schema fixes, remove unused packages, update phase status"
 ```
 
 ---
