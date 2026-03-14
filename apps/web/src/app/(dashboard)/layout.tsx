@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { AppShell } from "@/components/layout/app-shell";
 
 export default async function DashboardLayout({
   children,
@@ -13,6 +14,5 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  // AppShell will be added in Chunk 4 — for now just render children
-  return <>{children}</>;
+  return <AppShell user={user}>{children}</AppShell>;
 }
