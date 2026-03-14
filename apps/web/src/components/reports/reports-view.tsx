@@ -1,88 +1,80 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { DailyReport } from "@ai-todo/shared";
-import { Card } from "@/components/ui/card";
-import { format, subDays } from "date-fns";
+import { useState } from "react";
+import { format, subDays, startOfWeek, endOfWeek } from "date-fns";
+import { DailyReportView } from "./daily-report-view";
+import { WeeklyReportView } from "./weekly-report-view";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight, CalendarDays, Calendar } from "lucide-react";
+
+type ViewMode = "daily" | "weekly";
 
 export function ReportsView() {
-  const [reports, setReports] = useState<DailyReport[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<ViewMode>("daily");
+  const [currentDate, setCurrentDate] = useState(new Date());
 
-  useEffect(() => {
-    async function fetchReports() {
-      const dates = Array.from({ length: 7 }, (_, i) =>
-        format(subDays(new Date(), i), "yyyy-MM-dd")
-      );
+  const navigateBack = () => {
+    setCurrentDate((d) => subDays(d, viewMode === "daily" ? 7 : 7));
+  };
 
-      const results: DailyReport[] = [];
-      for (const date of dates) {
-        const res = await fetch(`/api/reports/${date}`);
-        if (res.ok) results.push(await res.json());
-      }
+  const navigateForward = () => {
+    setCurrentDate((d) => {
+      const next = new Date(d);
+      next.setDate(next.getDate() + (viewMode === "daily" ? 7 : 7));
+      return next > new Date() ? new Date() : next;
+    });
+  };
 
-      setReports(results);
-      setIsLoading(false);
-    }
-    fetchReports();
-  }, []);
-
-  if (isLoading) {
-    return (
-      <div className="p-4">
-        <p className="text-slate-400">Loading reports...</p>
-      </div>
-    );
-  }
+  const dateLabel = viewMode === "daily"
+    ? `${format(subDays(currentDate, 6), "MMM d")} - ${format(currentDate, "MMM d, yyyy")}`
+    : `Week of ${format(startOfWeek(currentDate, { weekStartsOn: 1 }), "MMM d")} - ${format(endOfWeek(currentDate, { weekStartsOn: 1 }), "MMM d, yyyy")}`;
 
   return (
-    <div className="space-y-4 p-4">
-      <h1 className="text-2xl font-bold">Reports</h1>
+    <div className="mx-auto max-w-4xl p-4 md:p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Reports</h1>
+          <p className="mt-1 text-sm text-slate-400">Track your productivity and trends.</p>
+        </div>
+        <div className="flex gap-1 rounded-lg bg-slate-900 p-1">
+          <Button
+            variant={viewMode === "daily" ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("daily")}
+          >
+            <CalendarDays className="mr-1.5 h-4 w-4" />
+            Daily
+          </Button>
+          <Button
+            variant={viewMode === "weekly" ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("weekly")}
+          >
+            <Calendar className="mr-1.5 h-4 w-4" />
+            Weekly
+          </Button>
+        </div>
+      </div>
 
-      {reports.length === 0 && (
-        <p className="text-slate-400">
-          No reports yet. Reports are generated at end of day.
-        </p>
-      )}
+      {/* Navigation */}
+      <div className="mt-4 flex items-center justify-between">
+        <Button variant="ghost" size="icon-sm" onClick={navigateBack}>
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <span className="text-sm font-medium text-slate-300">{dateLabel}</span>
+        <Button variant="ghost" size="icon-sm" onClick={navigateForward}>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
 
-      {reports.map((report) => (
-        <Card key={report.id} className="border-slate-800 bg-slate-900 p-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold">
-              {format(new Date(report.date), "EEEE, MMM d")}
-            </h2>
-            <div className="text-sm text-slate-400">
-              {report.tasks_completed}/
-              {report.tasks_completed + report.tasks_pending} done
-            </div>
-          </div>
-
-          <div className="mt-3 grid grid-cols-3 gap-2 text-center text-sm">
-            <div className="rounded bg-green-900/30 p-2">
-              <p className="text-lg font-bold text-green-400">
-                {report.tasks_completed}
-              </p>
-              <p className="text-xs text-slate-400">Completed</p>
-            </div>
-            <div className="rounded bg-yellow-900/30 p-2">
-              <p className="text-lg font-bold text-yellow-400">
-                {report.tasks_pending}
-              </p>
-              <p className="text-xs text-slate-400">Pending</p>
-            </div>
-            <div className="rounded bg-indigo-900/30 p-2">
-              <p className="text-lg font-bold text-indigo-400">
-                {report.total_focus_minutes}m
-              </p>
-              <p className="text-xs text-slate-400">Focus</p>
-            </div>
-          </div>
-
-          {report.ai_summary && (
-            <p className="mt-3 text-sm text-slate-300">{report.ai_summary}</p>
-          )}
-        </Card>
-      ))}
+      {/* Content */}
+      <div className="mt-6">
+        {viewMode === "daily" ? (
+          <DailyReportView currentDate={currentDate} />
+        ) : (
+          <WeeklyReportView currentDate={currentDate} />
+        )}
+      </div>
     </div>
   );
 }
