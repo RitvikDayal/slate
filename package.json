@@ -12,6 +12,7 @@
     "db:start": "supabase start"
   },
   "devDependencies": {
+    "supabase": "^2.78.1",
     "turbo": "^2.8.0",
     "typescript": "^5.7.0"
   }
