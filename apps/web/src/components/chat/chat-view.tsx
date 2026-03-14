@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChatMessage } from "./chat-message";
 import { ChatInput } from "./chat-input";
 import { QuickActions } from "./quick-actions";
+import { SuggestionsPanel } from "@/components/slack/suggestions-panel";
 
 export function ChatView() {
   const {
@@ -50,6 +51,9 @@ export function ChatView() {
           Ask me to manage tasks, adjust your schedule, or plan your day
         </p>
       </div>
+
+      {/* Slack Suggestions */}
+      <SuggestionsPanel />
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4">

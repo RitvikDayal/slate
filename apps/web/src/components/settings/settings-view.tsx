@@ -12,6 +12,7 @@ import {
   Smartphone,
   Send,
   Loader2,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePushNotifications } from "@/lib/hooks/use-push-notifications";
@@ -72,6 +73,9 @@ export function SettingsView() {
   const [syncing, setSyncing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const [sendingTest, setSendingTest] = useState(false);
+  const [slackChannels, setSlackChannels] = useState<string[]>([]);
+  const [newChannel, setNewChannel] = useState("");
+  const [scanning, setScanning] = useState(false);
 
   const {
     isSupported: pushSupported,
@@ -91,6 +95,18 @@ export function SettingsView() {
       setLoading(false);
     }
     fetchPrefs();
+  }, []);
+
+  // Fetch Slack channels
+  useEffect(() => {
+    async function fetchSlackChannels() {
+      const res = await window.fetch("/api/slack/channels");
+      if (res.ok) {
+        const data = await res.json();
+        setSlackChannels(data.channels || []);
+      }
+    }
+    fetchSlackChannels();
   }, []);
 
   // Fetch calendar sync status
@@ -138,6 +154,34 @@ export function SettingsView() {
       await pushUnsubscribe();
     }
     await updatePref("push_enabled", enabled);
+  };
+
+  const handleAddChannel = async () => {
+    if (!newChannel.trim()) return;
+    const updated = [...slackChannels, newChannel.trim()];
+    setSlackChannels(updated);
+    setNewChannel("");
+    await window.fetch("/api/slack/channels", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channels: updated }),
+    });
+  };
+
+  const handleRemoveChannel = async (channel: string) => {
+    const updated = slackChannels.filter((c) => c !== channel);
+    setSlackChannels(updated);
+    await window.fetch("/api/slack/channels", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channels: updated }),
+    });
+  };
+
+  const handleSlackScan = async () => {
+    setScanning(true);
+    await window.fetch("/api/slack/scan", { method: "POST" });
+    setTimeout(() => setScanning(false), 3000);
   };
 
   const handleTestNotification = async () => {
@@ -203,6 +247,91 @@ export function SettingsView() {
             )}
             Sync now
           </Button>
+        </div>
+      </Card>
+
+      {/* Slack Section */}
+      <Card className="mt-4 border-slate-800 bg-slate-900 p-5">
+        <div className="flex items-center gap-3">
+          <MessageSquare className="h-5 w-5 text-indigo-400" />
+          <h2 className="text-lg font-semibold">Slack Integration</h2>
+        </div>
+        <Separator className="my-4 bg-slate-800" />
+
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm font-medium">Monitored Channels</p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              Add Slack channel IDs to scan for tasks. Find IDs in channel
+              details.
+            </p>
+          </div>
+
+          {slackChannels.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {slackChannels.map((ch) => (
+                <span
+                  key={ch}
+                  className="inline-flex items-center gap-1 rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-300"
+                >
+                  #{ch}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveChannel(ch)}
+                    className="ml-1 text-slate-500 hover:text-red-400"
+                  >
+                    &times;
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newChannel}
+              onChange={(e) => setNewChannel(e.target.value)}
+              placeholder="Channel ID (e.g. C01ABC23DEF)"
+              className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleAddChannel();
+              }}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleAddChannel}
+              className="border-slate-700 text-slate-300"
+            >
+              Add
+            </Button>
+          </div>
+
+          <Separator className="bg-slate-800" />
+
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Manual Scan</p>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Scan configured channels now for task suggestions.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSlackScan}
+              disabled={scanning || slackChannels.length === 0}
+              className="border-slate-700 text-slate-300"
+            >
+              {scanning ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              Scan now
+            </Button>
+          </div>
         </div>
       </Card>
 
