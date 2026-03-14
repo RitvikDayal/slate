@@ -14,10 +14,12 @@
     "@anthropic-ai/sdk": "^0.78.0",
     "@supabase/supabase-js": "^2.99.1",
     "bullmq": "^5.71.0",
+    "cron": "^4.4.0",
     "dotenv": "^17.3.1",
     "ioredis": "^5.10.0"
   },
   "devDependencies": {
+    "@types/cron": "^2.4.3",
     "@types/node": "^20.19.37",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
