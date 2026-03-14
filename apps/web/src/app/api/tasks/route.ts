@@ -38,7 +38,12 @@ export async function POST(request: NextRequest) {
   const { user, supabase, error } = await getAuthenticatedUser();
   if (error) return error;
 
-  const body = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
   const parsed = createTaskSchema.safeParse(body);
 
   if (!parsed.success) {
