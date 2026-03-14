@@ -41,13 +41,14 @@ export async function processMorningPlan(job: Job<MorningPlanJobData>) {
     }
   }
 
-  const { data: tasks } = await supabase
-    .from("tasks")
+  const { data: items } = await supabase
+    .from("items")
     .select(
-      "id, title, description, priority, effort, estimated_minutes, status, is_movable, scheduled_date, due_date"
+      "id, title, type, priority, effort, estimated_minutes, is_completed, is_movable, scheduled_date, due_date, list_id"
     )
     .eq("user_id", userId)
-    .in("status", ["pending", "in_progress"])
+    .eq("is_completed", false)
+    .eq("is_archived", false)
     .or(`scheduled_date.eq.${date},scheduled_date.is.null,due_date.lte.${date}`)
     .order("priority", { ascending: false });
 
@@ -73,23 +74,23 @@ ${
     : "No calendar events today."
 }
 
-**Pending Tasks (${tasks?.length || 0}):**
+**Pending Items (${items?.length || 0}):**
 ${
-  tasks && tasks.length > 0
-    ? tasks
+  items && items.length > 0
+    ? items
         .map(
-          (t: any) =>
+          (t) =>
             `- [${t.id}] "${t.title}" | priority: ${t.priority} | effort: ${t.effort || "unknown"} | est: ${t.estimated_minutes || "unknown"}min | movable: ${t.is_movable}${t.due_date ? ` | due: ${t.due_date}` : ""}`
         )
         .join("\n")
-    : "No pending tasks."
+    : "No pending items."
 }
 
 **User Preferences:**
 - Timezone: ${profile?.timezone || "UTC"}
 - Preferences: ${JSON.stringify(profile?.preferences || {})}
 
-Please create an optimized daily schedule. First estimate any tasks missing durations, then generate the schedule with appropriate breaks.`;
+Please create an optimized daily schedule. First estimate any items missing durations, then generate the schedule with appropriate breaks.`;
 
   const result = await runAgent({
     userId,
