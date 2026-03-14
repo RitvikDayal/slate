@@ -3,7 +3,9 @@
 import { useCallback, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, isToday, isTomorrow, isPast } from "date-fns";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, GripVertical } from "lucide-react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 import { taskItemVariants, layoutSpring } from "@/lib/animations";
 import { playComplete, playUncomplete } from "@/lib/sounds";
@@ -54,6 +56,22 @@ export function TaskItem({ item, depth = 0, childItems = [] }: TaskItemProps) {
   const [childrenVisible, setChildrenVisible] = useState(false);
   const hasChildren = childItems.length > 0;
 
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const sortStyle = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    paddingLeft: (depth ?? 0) * 24,
+  };
+
   const handleToggle = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -78,16 +96,27 @@ export function TaskItem({ item, depth = 0, childItems = [] }: TaskItemProps) {
 
   return (
     <motion.div
+      ref={setNodeRef}
+      style={sortStyle}
       variants={taskItemVariants}
       layout
       transition={layoutSpring}
       className="group"
-      style={{ paddingLeft: depth * 24 }}
     >
       <div
         className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/50 active:bg-muted/70"
         onClick={handleClick}
       >
+        {/* Drag handle */}
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          className="flex h-4 w-4 shrink-0 cursor-grab items-center justify-center text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 active:cursor-grabbing"
+        >
+          <GripVertical className="h-3.5 w-3.5" />
+        </button>
+
         {/* Disclosure chevron */}
         {hasChildren ? (
           <motion.button

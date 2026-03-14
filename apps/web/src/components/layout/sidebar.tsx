@@ -8,18 +8,34 @@ import {
   Inbox,
   CalendarCheck,
   CalendarClock,
-  CheckCircle2,
   Plus,
   PanelLeftClose,
   PanelLeft,
   Calendar,
   MessageCircle,
   BarChart3,
+  GripVertical,
 } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { cn } from "@/lib/utils";
 import { useListStore } from "@/stores/list-store";
 import { useUIStore } from "@/stores/ui-store";
 import type { User } from "@supabase/supabase-js";
+import type { List } from "@ai-todo/shared";
 import { layoutSpring } from "@/lib/animations";
 
 const smartLists = [
@@ -31,13 +47,79 @@ const smartLists = [
   { href: "/reports", label: "Reports", icon: BarChart3 },
 ];
 
+function SortableListItem({
+  list,
+  isActive,
+  sidebarCollapsed,
+}: {
+  list: List;
+  isActive: boolean;
+  sidebarCollapsed: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: list.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="group/list-item relative">
+      <Link
+        href={`/list/${list.id}`}
+        title={list.title}
+        className={cn(
+          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+          sidebarCollapsed && "justify-center px-0",
+          isActive
+            ? "bg-primary/10 text-primary"
+            : "text-muted-foreground hover:bg-muted"
+        )}
+      >
+        {!sidebarCollapsed && (
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            className="flex h-4 w-4 shrink-0 cursor-grab items-center justify-center text-muted-foreground opacity-0 transition-opacity group-hover/list-item:opacity-100 active:cursor-grabbing"
+            onClick={(e) => e.preventDefault()}
+          >
+            <GripVertical className="h-3.5 w-3.5" />
+          </button>
+        )}
+        {list.icon ? (
+          <span className="shrink-0 text-base">{list.icon}</span>
+        ) : (
+          <span
+            className="h-2 w-2 shrink-0 rounded-full"
+            style={{
+              backgroundColor: list.color || "var(--color-muted-foreground)",
+            }}
+          />
+        )}
+        {!sidebarCollapsed && (
+          <span className="truncate">{list.title}</span>
+        )}
+      </Link>
+    </div>
+  );
+}
+
 export function Sidebar({ user }: { user: User }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isCreating, setIsCreating] = useState(false);
   const [newListName, setNewListName] = useState("");
   const newListInputRef = useRef<HTMLInputElement>(null);
-  const { lists, fetchLists, createList } = useListStore();
+  const { lists, fetchLists, createList, reorderLists } = useListStore();
   const { sidebarCollapsed, toggleSidebarCollapsed } = useUIStore();
 
   useEffect(() => {
@@ -45,6 +127,23 @@ export function Sidebar({ user }: { user: User }) {
   }, [fetchLists]);
 
   const userLists = lists.filter((l) => !l.is_inbox && !l.is_archived);
+  const userListIds = userLists.map((l) => l.id);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+
+  function handleListDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = userListIds.indexOf(active.id as string);
+    const newIndex = userListIds.indexOf(over.id as string);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const newIds = [...userListIds];
+    newIds.splice(oldIndex, 1);
+    newIds.splice(newIndex, 0, active.id as string);
+    reorderLists(newIds);
+  }
 
   return (
     <div
@@ -107,37 +206,29 @@ export function Sidebar({ user }: { user: User }) {
             Lists
           </p>
         )}
-        {userLists.map((list) => {
-          const isActive = pathname === `/list/${list.id}`;
-          return (
-            <Link
-              key={list.id}
-              href={`/list/${list.id}`}
-              title={list.title}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                sidebarCollapsed && "justify-center px-0",
-                isActive
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-muted"
-              )}
-            >
-              {list.icon ? (
-                <span className="shrink-0 text-base">{list.icon}</span>
-              ) : (
-                <span
-                  className="h-2 w-2 shrink-0 rounded-full"
-                  style={{
-                    backgroundColor: list.color || "var(--color-muted-foreground)",
-                  }}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          modifiers={[restrictToVerticalAxis]}
+          onDragEnd={handleListDragEnd}
+        >
+          <SortableContext
+            items={userListIds}
+            strategy={verticalListSortingStrategy}
+          >
+            {userLists.map((list) => {
+              const isActive = pathname === `/list/${list.id}`;
+              return (
+                <SortableListItem
+                  key={list.id}
+                  list={list}
+                  isActive={isActive}
+                  sidebarCollapsed={sidebarCollapsed}
                 />
-              )}
-              {!sidebarCollapsed && (
-                <span className="truncate">{list.title}</span>
-              )}
-            </Link>
-          );
-        })}
+              );
+            })}
+          </SortableContext>
+        </DndContext>
 
         {/* New List button */}
         {!sidebarCollapsed && (
