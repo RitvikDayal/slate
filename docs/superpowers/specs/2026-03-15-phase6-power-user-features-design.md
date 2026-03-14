@@ -43,13 +43,77 @@ New `attachments` table:
 | `thumbnail_url` | text | Auto-generated for images, favicon for links |
 | `position` | real | Ordering within a task (fractional indexing) |
 | `created_at` | timestamptz | |
+| `updated_at` | timestamptz | |
 
-RLS: users can only access attachments on their own items.
+RLS: users can only access attachments on their own items (`user_id = auth.uid()`).
+
+### Migration
+
+```sql
+-- Create attachments table
+CREATE TABLE attachments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN ('file', 'link')),
+  name TEXT NOT NULL,
+  url TEXT NOT NULL,
+  mime_type TEXT,
+  size_bytes INTEGER,
+  thumbnail_url TEXT,
+  position REAL NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_attachments_item_id ON attachments(item_id);
+CREATE INDEX idx_attachments_user_id ON attachments(user_id);
+
+ALTER TABLE attachments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage own attachments"
+  ON attachments FOR ALL USING (user_id = auth.uid());
+
+-- Trigger for updated_at
+CREATE TRIGGER set_attachments_updated_at
+  BEFORE UPDATE ON attachments
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+```
+
+### Supabase Storage Bucket
+
+```sql
+-- Create private storage bucket
+INSERT INTO storage.buckets (id, name, public) VALUES ('attachments', 'attachments', false);
+
+-- Users can upload to their own path
+CREATE POLICY "Users upload own attachments"
+  ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'attachments' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+-- Users can read their own attachments
+CREATE POLICY "Users read own attachments"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'attachments' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+-- Users can delete their own attachments
+CREATE POLICY "Users delete own attachments"
+  ON storage.objects FOR DELETE
+  USING (bucket_id = 'attachments' AND (storage.foldername(name))[1] = auth.uid()::text);
+```
+
+Bucket is **private** — files accessed via signed URLs generated server-side.
+
+### File Upload Flow
+
+1. Client calls `supabase.storage.from('attachments').upload('{user_id}/{item_id}/{filename}', file)` directly from the browser
+2. On success, client calls `POST /api/items/[id]/attachments` with metadata (`name`, `type: 'file'`, `mime_type`, `size_bytes`, storage path)
+3. Server validates, checks user quota (`SELECT SUM(size_bytes) FROM attachments WHERE user_id = ?` — must be < 100MB), creates attachment record
+4. Server generates signed URL via `supabase.storage.from('attachments').createSignedUrl()` and returns it in response
 
 ### File Uploads
 
-- **Storage:** Supabase Storage bucket `attachments`, path: `{user_id}/{item_id}/{filename}`
-- **Limits:** 10MB per file, 100MB total per user
+- **Storage:** Supabase Storage bucket `attachments` (private), path: `{user_id}/{item_id}/{filename}`
+- **Limits:** 10MB per file, 100MB total per user (enforced by quota check on `POST`)
 - **Supported types:** Images (png/jpg/gif/webp), PDFs, common document formats
 - **Upload methods:**
   - Drag-drop onto TaskDetail panel
@@ -66,7 +130,7 @@ RLS: users can only access attachments on their own items.
 
 - **BubbleMenu:** Floating toolbar on text selection — bold, italic, strike, link, code
 - **Drag-drop images:** Drop image files into editor → uploads to Storage → inserts as inline image
-- **Slash commands:** `/image` (upload prompt), `/link` (URL input), `/heading` (H1–H3), `/todo` (checklist)
+- **Slash commands:** `/image` (upload prompt), `/link` (URL input), `/heading` (H1–H3), `/todo` (checklist). Requires `@tiptap/suggestion` extension for the slash command trigger.
 
 ### UI — TaskDetail Attachments Section
 
@@ -127,9 +191,16 @@ Uses existing `@dnd-kit/core` and `fractional-indexing` packages.
 - Drag overlay (ghost element) follows finger/cursor
 - Minimum 44px touch targets
 
-### No New API Routes
+### API Changes
 
-Existing `reorder` and `move` endpoints cover all cases.
+The existing `POST /api/items/reorder` currently assigns sequential integer positions. This must be updated to accept fractional position values per item instead of deriving positions from array order:
+
+```json
+// Current: { list_id: "...", ordered_ids: ["a", "b", "c"] }
+// New:     { list_id: "...", items: [{ id: "a", position: "a0" }, { id: "b", position: "a1" }] }
+```
+
+Only the moved item(s) need new positions — use `fractional-indexing` to compute a position between neighbors. Same change applies to `POST /api/lists/reorder`. The `POST /api/items/[id]/move` endpoint already accepts a `position` field and needs no changes.
 
 ---
 
@@ -160,6 +231,14 @@ Existing `reorder` and `move` endpoints cover all cases.
 - **Endpoint:** Accepts text or pre-transcribed audio, returns created item
 - **PWA share target:** Share text/URLs from other apps into the todo app
 
+### Error Handling & Edge Cases
+
+- **Microphone permission denied:** Show toast "Microphone access required for voice input" with a link to browser settings. Hide mic button if permission is permanently denied (`navigator.permissions.query`).
+- **Low confidence / partial transcription:** Accept any result — AI parsing handles noisy input gracefully. Show the raw transcript in the input so the user can edit before confirming.
+- **Timeout:** Auto-stop recording after 30 seconds of silence or 2 minutes total. Show a subtle timer indicator.
+- **AI parsing failure:** If the chat API returns an error, fall back to creating a task with the raw transcript as the title. Show toast "Couldn't parse — created task with your words."
+- **Network offline:** Disable mic button when offline (voice capture requires the AI API). Show tooltip "Voice capture requires an internet connection."
+
 ### Browser Compatibility
 
 - Web Speech API: Chrome, Safari, Edge (good coverage)
@@ -186,9 +265,26 @@ Existing infrastructure: Slack OAuth, message analyzer, suggestion cards, scanne
 
 ### Gmail Capture (New Integration)
 
-**OAuth:**
+**Schema migration — add `'gmail'` source:**
+
+The `items.source` CHECK constraint and TypeScript types must be updated:
+
+```sql
+-- Migration: add 'gmail' to items source CHECK
+ALTER TABLE items DROP CONSTRAINT items_source_check;
+ALTER TABLE items ADD CONSTRAINT items_source_check CHECK (source IN ('manual', 'slack', 'ai_suggested', 'gmail'));
+```
+
+Also update:
+- `packages/shared/src/types/database.ts`: `ItemSource = "manual" | "slack" | "ai_suggested" | "gmail"`
+- `packages/shared/src/validation/item.ts`: `z.enum(["manual", "slack", "ai_suggested", "gmail"])`
+
+**OAuth & token strategy:**
 - Google OAuth already configured for calendar — add `gmail.readonly` scope
-- Incremental consent: prompt for Gmail permission only when user enables Gmail capture in Settings
+- **Incremental consent:** When user enables Gmail capture in Settings, trigger `supabase.auth.signInWithOAuth({ provider: 'google', options: { scopes: 'email openid https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/gmail.readonly' } })` — this re-authorizes with the additional scope
+- **Token storage:** After re-auth, extract `provider_token` and `provider_refresh_token` from the session via `supabase.auth.getSession()`. Store in the existing `user_secrets` table (service_role only, no client RLS policies) as `gmail_access_token` and `gmail_refresh_token`.
+- **Token refresh:** Worker checks token expiry before each scan. If expired, use the refresh token via Google's token endpoint to get a new access token. Update `user_secrets` with the new token.
+- **Worker access:** The `gmail-scanner` job reads tokens from `user_secrets` using the service_role client (bypasses RLS).
 
 **Background job — `gmail-scanner`:**
 - Runs periodically (configurable interval, default 15 min)
@@ -229,6 +325,7 @@ Built-in views in sidebar under a "Views" section:
 - Each view is a route: `/views/[slug]`
 - Reuses TaskList component with different data source
 - API: `GET /api/views/[slug]` with predefined query per slug
+- **Note:** Existing `/api/views/today` and `/api/views/upcoming` routes remain as-is — they serve the Today and Upcoming pages with schedule-specific data. Preset smart views use new slugs (`high-priority`, `due-this-week`, `overdue`, `no-date`, `completed`) that don't conflict.
 
 ### Custom Filter Builder (Second Milestone)
 
@@ -264,7 +361,29 @@ RLS: users can only access their own saved views.
 
 **Operators:** `eq`, `neq`, `lt`, `gt`, `lte`, `gte`, `contains`, `is_empty`, `is_not_empty`
 
-**Relative date values:** `today`, `tomorrow`, `this_week`, `next_week`, `next_friday`, etc. — resolved server-side at query time.
+**Relative date values:** `today`, `tomorrow`, `this_week`, `next_week`, `next_friday`, etc. — resolved server-side at query time using the user's timezone from the `profiles.timezone` field.
+
+**Validation (Zod):**
+
+```typescript
+const filterFieldSchema = z.enum([
+  "priority", "due_date", "labels", "list_id",
+  "effort", "is_completed", "source", "created_at"
+]);
+
+const filterOpSchema = z.enum([
+  "eq", "neq", "lt", "gt", "lte", "gte",
+  "contains", "is_empty", "is_not_empty"
+]);
+
+const filterRuleSchema = z.object({
+  field: filterFieldSchema,
+  op: filterOpSchema,
+  value: z.union([z.string(), z.number(), z.boolean(), z.null()]),
+});
+
+const savedViewFiltersSchema = z.array(filterRuleSchema).max(20);
+```
 
 **UI:**
 - Filter builder panel — add rules row by row: field → operator → value
@@ -272,6 +391,34 @@ RLS: users can only access their own saved views.
 - Pinned views appear in sidebar under "Views" alongside presets
 - Context menu on sidebar views: edit, unpin, delete
 - Unpinned views accessible from a "All Views" page
+
+### Migration
+
+```sql
+CREATE TABLE saved_views (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  icon TEXT,
+  color TEXT,
+  filters JSONB NOT NULL DEFAULT '[]',
+  sort_by TEXT NOT NULL DEFAULT 'due_date:asc',
+  is_pinned BOOLEAN NOT NULL DEFAULT false,
+  position REAL NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_saved_views_user_id ON saved_views(user_id);
+
+ALTER TABLE saved_views ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage own views"
+  ON saved_views FOR ALL USING (user_id = auth.uid());
+
+CREATE TRIGGER set_saved_views_updated_at
+  BEFORE UPDATE ON saved_views
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+```
 
 ### API Routes
 
