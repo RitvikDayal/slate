@@ -10,20 +10,18 @@ import type { EodReportJobData } from "@ai-todo/shared";
 export async function processEodReport(job: Job<EodReportJobData>) {
   const { userId, date } = job.data;
 
-  const { data: allTasks } = await supabase
-    .from("tasks")
+  const { data: allItems } = await supabase
+    .from("items")
     .select(
-      "id, title, status, priority, scheduled_start, scheduled_end, completed_at"
+      "id, title, is_completed, priority, scheduled_start, scheduled_end, completed_at, list_id"
     )
     .eq("user_id", userId)
-    .eq("scheduled_date", date);
+    .eq("scheduled_date", date)
+    .eq("is_archived", false);
 
-  const tasks = allTasks || [];
-  const completed = tasks.filter((t: any) => t.status === "done");
-  const pending = tasks.filter(
-    (t: any) => t.status === "pending" || t.status === "in_progress"
-  );
-  const cancelled = tasks.filter((t: any) => t.status === "cancelled");
+  const items = allItems || [];
+  const completed = items.filter((t) => t.is_completed);
+  const pending = items.filter((t) => !t.is_completed);
 
   let focusMinutes = 0;
   for (const t of completed) {
@@ -39,16 +37,15 @@ export async function processEodReport(job: Job<EodReportJobData>) {
   const userMessage = `Generate an end-of-day report for ${date}.
 
 **Stats:**
-- Completed: ${completed.length} tasks
-- Pending: ${pending.length} tasks
-- Cancelled: ${cancelled.length} tasks
+- Completed: ${completed.length} items
+- Pending: ${pending.length} items
 - Total focus time: ${focusMinutes} minutes
 
-**Completed tasks:**
-${completed.map((t: any) => `- "${t.title}" (${t.priority})`).join("\n") || "None"}
+**Completed items:**
+${completed.map((t) => `- "${t.title}" (${t.priority})`).join("\n") || "None"}
 
 **Still pending:**
-${pending.map((t: any) => `- "${t.title}" (${t.priority})`).join("\n") || "None"}
+${pending.map((t) => `- "${t.title}" (${t.priority})`).join("\n") || "None"}
 
 Please write a concise, encouraging summary.`;
 
@@ -69,12 +66,12 @@ Please write a concise, encouraging summary.`;
         date,
         tasks_completed: completed.length,
         tasks_pending: pending.length,
-        tasks_cancelled: cancelled.length,
+        tasks_cancelled: 0,
         total_focus_minutes: focusMinutes,
         ai_summary: result.finalText,
         highlights: completed
           .slice(0, 5)
-          .map((t: any) => ({ title: t.title, priority: t.priority })),
+          .map((t) => ({ title: t.title, priority: t.priority })),
         sent_at: new Date().toISOString(),
       },
       { onConflict: "user_id,date" }
@@ -122,16 +119,16 @@ Please write a concise, encouraging summary.`;
   const tomorrow = new Date(date);
   tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowStr = tomorrow.toISOString().split("T")[0];
-  for (const task of pending) {
+  for (const item of pending) {
     await supabase
-      .from("tasks")
+      .from("items")
       .update({
         scheduled_date: tomorrowStr,
         scheduled_start: null,
         scheduled_end: null,
         ai_notes: `Carried over from ${date}`,
       })
-      .eq("id", task.id);
+      .eq("id", item.id);
   }
 
   return { success: true, reportId: report?.id };
