@@ -21,3 +21,7 @@ export function getAiQueue() {
 export function getNotificationQueue() {
   return new Queue(QUEUE_NAMES.NOTIFICATIONS, { connection: getConnection() });
 }
+
+export function getCalendarQueue() {
+  return new Queue(QUEUE_NAMES.CALENDAR, { connection: getConnection() });
+}

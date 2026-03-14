@@ -21,11 +21,19 @@ const taskLimiter = new Ratelimit({
   prefix: "ratelimit:tasks",
 });
 
+const calendarLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, "1 m"),
+  analytics: true,
+  prefix: "ratelimit:calendar",
+});
+
 export async function checkRateLimit(
   userId: string,
-  type: "chat" | "tasks" = "chat"
+  type: "chat" | "tasks" | "calendar" = "chat"
 ): Promise<NextResponse | null> {
-  const limiter = type === "chat" ? chatLimiter : taskLimiter;
+  const limiters = { chat: chatLimiter, tasks: taskLimiter, calendar: calendarLimiter };
+  const limiter = limiters[type];
   const { success, limit, remaining, reset } = await limiter.limit(userId);
 
   if (!success) {
