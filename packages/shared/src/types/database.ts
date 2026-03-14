@@ -56,3 +56,66 @@ export interface Notification {
   read_at: string | null;
   created_at: string;
 }
+
+export interface CalendarEvent {
+  id: string;
+  user_id: string;
+  google_event_id: string;
+  title: string;
+  description: string | null;
+  start_time: string;
+  end_time: string;
+  is_all_day: boolean;
+  location: string | null;
+  synced_at: string;
+  created_at: string;
+}
+
+export interface ScheduleSlot {
+  start: string;
+  end: string;
+  type: ScheduleSlotType;
+  ref_id: string | null;
+  title: string;
+  notes: string | null;
+}
+
+export interface DailySchedule {
+  id: string;
+  user_id: string;
+  date: string;
+  plan: ScheduleSlot[];
+  ai_summary: string | null;
+  status: ScheduleStatus;
+  user_confirmed: boolean;
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DailyReport {
+  id: string;
+  user_id: string;
+  date: string;
+  tasks_completed: number;
+  tasks_pending: number;
+  tasks_cancelled: number;
+  total_focus_minutes: number;
+  ai_summary: string | null;
+  highlights: Record<string, unknown>[];
+  sent_at: string | null;
+  created_at: string;
+}
+
+export type ChatRole = "user" | "assistant";
+
+export interface ChatMessage {
+  id: string;
+  user_id: string;
+  date: string;
+  role: ChatRole;
+  content: string;
+  tool_calls: Record<string, unknown>[] | null;
+  tool_results: Record<string, unknown>[] | null;
+  created_at: string;
+}
