@@ -2,70 +2,87 @@ import type Anthropic from "@anthropic-ai/sdk";
 
 type Tool = Anthropic.Tool;
 
-export const TASK_TOOLS: Tool[] = [
+export const ITEM_TOOLS: Tool[] = [
   {
-    name: "create_task",
-    description: "Create a new task for the user",
+    name: "create_item",
+    description: "Create a new item (task, note, or heading)",
     input_schema: {
       type: "object" as const,
       properties: {
-        title: { type: "string", description: "Task title" },
-        description: { type: "string", description: "Optional task description" },
-        priority: { type: "string", enum: ["low", "medium", "high"], description: "Task priority" },
+        list_id: { type: "string", description: "UUID of the list to add the item to" },
+        title: { type: "string", description: "Item title" },
+        type: { type: "string", enum: ["task", "note", "heading"], description: "Item type" },
+        priority: { type: "string", enum: ["none", "low", "medium", "high"], description: "Item priority" },
         effort: { type: "string", enum: ["xs", "s", "m", "l", "xl"], description: "Estimated effort" },
         estimated_minutes: { type: "number", description: "Estimated duration in minutes" },
+        due_date: { type: "string", description: "Due date (YYYY-MM-DD)" },
+        due_time: { type: "string", description: "Due time (HH:MM)" },
         scheduled_date: { type: "string", description: "Date to schedule (YYYY-MM-DD)" },
         scheduled_start: { type: "string", description: "ISO 8601 start time" },
         scheduled_end: { type: "string", description: "ISO 8601 end time" },
-        is_movable: { type: "boolean", description: "Whether AI can reschedule this task" },
+        is_movable: { type: "boolean", description: "Whether AI can reschedule this item" },
       },
       required: ["title"],
     },
   },
   {
-    name: "update_task",
-    description: "Update an existing task's properties",
+    name: "update_item",
+    description: "Update an existing item's properties",
     input_schema: {
       type: "object" as const,
       properties: {
-        task_id: { type: "string", description: "UUID of the task to update" },
-        title: { type: "string" },
-        status: { type: "string", enum: ["pending", "in_progress", "done", "cancelled"] },
-        priority: { type: "string", enum: ["low", "medium", "high"] },
+        item_id: { type: "string", description: "UUID of the item to update" },
+        title: { type: "string", description: "Updated title" },
+        is_completed: { type: "boolean", description: "Whether the item is completed" },
+        priority: { type: "string", enum: ["none", "low", "medium", "high"] },
         effort: { type: "string", enum: ["xs", "s", "m", "l", "xl"] },
         estimated_minutes: { type: "number" },
-        scheduled_start: { type: "string" },
-        scheduled_end: { type: "string" },
+        due_date: { type: "string", description: "Due date (YYYY-MM-DD)" },
+        scheduled_start: { type: "string", description: "ISO 8601 start time" },
+        scheduled_end: { type: "string", description: "ISO 8601 end time" },
         is_movable: { type: "boolean" },
+        ai_notes: { type: "string", description: "AI-generated notes about the item" },
       },
-      required: ["task_id"],
+      required: ["item_id"],
     },
   },
   {
-    name: "complete_task",
-    description: "Mark a task as done",
+    name: "complete_item",
+    description: "Mark an item as completed",
     input_schema: {
       type: "object" as const,
       properties: {
-        task_id: { type: "string", description: "UUID of the task" },
+        item_id: { type: "string", description: "UUID of the item" },
         completion_notes: { type: "string", description: "Optional notes about completion" },
       },
-      required: ["task_id"],
+      required: ["item_id"],
     },
   },
   {
-    name: "get_tasks",
-    description: "Fetch tasks for a specific date, optionally filtered by status",
+    name: "list_items",
+    description: "List items filtered by list, date, or completion status",
     input_schema: {
       type: "object" as const,
       properties: {
-        date: { type: "string", description: "Date in YYYY-MM-DD format" },
-        status: { type: "string", enum: ["pending", "in_progress", "done", "cancelled"] },
+        list_id: { type: "string", description: "UUID of the list to filter by" },
+        due_date: { type: "string", description: "Filter by due date (YYYY-MM-DD)" },
+        scheduled_date: { type: "string", description: "Filter by scheduled date (YYYY-MM-DD)" },
+        include_completed: { type: "boolean", description: "Whether to include completed items" },
       },
-      required: ["date"],
+    },
+  },
+  {
+    name: "get_lists",
+    description: "Get all user lists with item counts",
+    input_schema: {
+      type: "object" as const,
+      properties: {},
     },
   },
 ];
+
+/** @deprecated Use ITEM_TOOLS instead */
+export const TASK_TOOLS = ITEM_TOOLS;
 
 export const CALENDAR_TOOLS: Tool[] = [
   {
@@ -168,14 +185,14 @@ export const INTELLIGENCE_TOOLS: Tool[] = [
 ];
 
 export const ALL_TOOLS: Tool[] = [
-  ...TASK_TOOLS,
+  ...ITEM_TOOLS,
   ...CALENDAR_TOOLS,
   ...SCHEDULE_TOOLS,
   ...INTELLIGENCE_TOOLS,
 ];
 
 export const MORNING_PLAN_TOOLS: Tool[] = [
-  ...TASK_TOOLS.filter((t) => t.name === "get_tasks"),
+  ...ITEM_TOOLS.filter((t) => t.name === "list_items" || t.name === "get_lists"),
   ...CALENDAR_TOOLS,
   ...SCHEDULE_TOOLS,
   ...INTELLIGENCE_TOOLS.filter((t) => t.name === "estimate_task"),
@@ -184,6 +201,6 @@ export const MORNING_PLAN_TOOLS: Tool[] = [
 export const CHAT_TOOLS: Tool[] = ALL_TOOLS;
 
 export const EOD_TOOLS: Tool[] = [
-  ...TASK_TOOLS.filter((t) => t.name === "get_tasks"),
+  ...ITEM_TOOLS.filter((t) => t.name === "list_items" || t.name === "get_lists"),
   ...CALENDAR_TOOLS,
 ];
