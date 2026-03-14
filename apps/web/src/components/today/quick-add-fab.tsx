@@ -25,6 +25,8 @@ export function QuickAddFab({ onAdd }: QuickAddFabProps) {
     try {
       await onAdd({
         title: title.trim(),
+        priority: "medium",
+        is_movable: true,
         scheduled_date: format(new Date(), "yyyy-MM-dd"),
       });
       setTitle("");

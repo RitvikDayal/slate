@@ -59,7 +59,7 @@ export function TaskDetailDialog({ trigger, onSubmit }: TaskDetailDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogTrigger>{trigger}</DialogTrigger>
       <DialogContent className="border-slate-800 bg-slate-900">
         <DialogHeader>
           <DialogTitle>New Task</DialogTitle>
