@@ -1,18 +1,16 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthenticatedUser } from "@/lib/api/auth";
 import { AppShell } from "@/components/layout/app-shell";
+import { SyncProvider } from "@/components/providers/sync-provider";
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  return <AppShell user={user}>{children}</AppShell>;
+  const { user } = await getAuthenticatedUser();
+  return (
+    <SyncProvider>
+      <AppShell user={user}>{children}</AppShell>
+    </SyncProvider>
+  );
 }
