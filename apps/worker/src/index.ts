@@ -8,6 +8,7 @@ import { processEodReport } from "./jobs/eod-report";
 import { processSmartEstimate } from "./jobs/smart-estimate";
 import { processAutoComplete } from "./jobs/auto-complete";
 import { processCalendarSync } from "./jobs/calendar-sync";
+import { processNotificationDispatch } from "./jobs/notification-dispatcher";
 import { startCronScheduler } from "./cron/scheduler";
 
 console.log("Starting AI Todo Worker...");
@@ -42,15 +43,9 @@ const notificationWorker = new Worker(
   QUEUE_NAMES.NOTIFICATIONS,
   async (job) => {
     console.log(
-      `Dispatching notifications: ${job.data.notificationIds.length} items`
+      `Dispatching notifications: ${job.data.notificationIds?.length ?? 0} items`
     );
-    const { supabase } = await import("./lib/supabase");
-    for (const id of job.data.notificationIds) {
-      await supabase
-        .from("notifications")
-        .update({ sent_at: new Date().toISOString() })
-        .eq("id", id);
-    }
+    return processNotificationDispatch(job);
   },
   { connection: createRedisConnection(), concurrency: 10 }
 );
