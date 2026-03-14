@@ -1,0 +1,18 @@
+{
+  "name": "ai-todo-app",
+  "private": true,
+  "packageManager": "pnpm@10.29.3",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "db:migrate": "supabase db push",
+    "db:reset": "supabase db reset",
+    "db:start": "supabase start"
+  },
+  "devDependencies": {
+    "turbo": "^2.8.0",
+    "typescript": "^5.7.0"
+  }
+}
