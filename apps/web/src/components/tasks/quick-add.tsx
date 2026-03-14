@@ -2,13 +2,14 @@
 
 import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, CalendarDays, Flag, FolderOpen, Check } from "lucide-react";
+import { Plus, CalendarDays, Flag, FolderOpen, Check, Tag } from "lucide-react";
 import * as chrono from "chrono-node";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { playCreate } from "@/lib/sounds";
 import { useItemStore } from "@/stores/item-store";
 import { useListStore } from "@/stores/list-store";
+import { useLabelStore } from "@/stores/label-store";
 import { DatePicker } from "@/components/date/date-picker";
 import type { ItemPriority } from "@ai-todo/shared";
 
@@ -33,10 +34,13 @@ export function QuickAdd({ listId, defaultDueDate }: QuickAddProps) {
   const [manualDate, setManualDate] = useState<string | null>(null);
   const [selectedListId, setSelectedListId] = useState(listId);
   const [showListPicker, setShowListPicker] = useState(false);
+  const [showLabelPicker, setShowLabelPicker] = useState(false);
+  const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
   const [justCreated, setJustCreated] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { createItem } = useItemStore();
   const lists = useListStore((s) => s.lists);
+  const { labels } = useLabelStore();
 
   const parseInput = useCallback((text: string) => {
     setValue(text);
@@ -62,6 +66,7 @@ export function QuickAdd({ listId, defaultDueDate }: QuickAddProps) {
         priority,
         source: "manual",
         due_date: manualDate ?? parsedDate ?? defaultDueDate ?? undefined,
+        label_ids: selectedLabelIds.length > 0 ? selectedLabelIds : undefined,
       });
       playCreate();
       setJustCreated(true);
@@ -71,11 +76,13 @@ export function QuickAdd({ listId, defaultDueDate }: QuickAddProps) {
       setParsedDate(null);
       setManualDate(null);
       setShowPriority(false);
+      setSelectedLabelIds([]);
+      setShowLabelPicker(false);
       setSelectedListId(listId);
     } catch {
       // Silently fail — store handles errors
     }
-  }, [value, listId, selectedListId, priority, parsedDate, manualDate, createItem]);
+  }, [value, listId, selectedListId, priority, parsedDate, manualDate, selectedLabelIds, createItem]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -285,11 +292,82 @@ export function QuickAdd({ listId, defaultDueDate }: QuickAddProps) {
                   </AnimatePresence>
                 </div>
 
+                {/* Label selector */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowLabelPicker(!showLabelPicker)}
+                    className={cn(
+                      "rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted",
+                      selectedLabelIds.length > 0 && "text-primary"
+                    )}
+                    title="Add labels"
+                  >
+                    <Tag className="h-4 w-4" />
+                  </button>
+                  <AnimatePresence>
+                    {showLabelPicker && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className="absolute bottom-full left-0 z-50 mb-1 w-44 rounded-lg border border-border bg-popover p-1 shadow-lg"
+                      >
+                        {labels.map((label) => (
+                          <button
+                            key={label.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedLabelIds((prev) =>
+                                prev.includes(label.id)
+                                  ? prev.filter((id) => id !== label.id)
+                                  : [...prev, label.id]
+                              );
+                            }}
+                            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-sm transition-colors hover:bg-muted"
+                          >
+                            <span
+                              className="h-2 w-2 rounded-full"
+                              style={{ backgroundColor: label.color }}
+                            />
+                            {label.name}
+                            {selectedLabelIds.includes(label.id) && (
+                              <span className="ml-auto text-primary">✓</span>
+                            )}
+                          </button>
+                        ))}
+                        {labels.length === 0 && (
+                          <p className="px-2 py-1.5 text-xs text-muted-foreground">No labels</p>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
                 {/* Selected list badge */}
                 {selectedListId !== listId && (
                   <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                     {lists.find((l) => l.id === selectedListId)?.title}
                   </span>
+                )}
+
+                {/* Selected label pills */}
+                {selectedLabelIds.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {selectedLabelIds.map((id) => {
+                      const label = labels.find((l) => l.id === id);
+                      if (!label) return null;
+                      return (
+                        <span
+                          key={id}
+                          className="rounded-full px-2 py-0.5 text-[10px] font-medium"
+                          style={{ backgroundColor: `${label.color}20`, color: label.color }}
+                        >
+                          {label.name}
+                        </span>
+                      );
+                    })}
+                  </div>
                 )}
 
                 <div className="flex-1" />
