@@ -13,9 +13,12 @@ import {
   Send,
   Loader2,
   MessageSquare,
+  Tag,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePushNotifications } from "@/lib/hooks/use-push-notifications";
+import { useLabelStore } from "@/stores/label-store";
 import { formatDistanceToNow, parseISO } from "date-fns";
 
 interface Preferences {
@@ -53,8 +56,8 @@ function Toggle({
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={cn(
-        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-50",
-        checked ? "bg-indigo-600" : "bg-slate-700"
+        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
+        checked ? "bg-primary" : "bg-muted"
       )}
     >
       <span
@@ -76,6 +79,9 @@ export function SettingsView() {
   const [slackChannels, setSlackChannels] = useState<string[]>([]);
   const [newChannel, setNewChannel] = useState("");
   const [scanning, setScanning] = useState(false);
+  const [newLabelName, setNewLabelName] = useState("");
+  const [newLabelColor, setNewLabelColor] = useState("#6366f1");
+  const { labels, fetchLabels, createLabel, deleteLabel } = useLabelStore();
 
   const {
     isSupported: pushSupported,
@@ -96,6 +102,11 @@ export function SettingsView() {
     }
     fetchPrefs();
   }, []);
+
+  // Fetch labels
+  useEffect(() => {
+    fetchLabels();
+  }, [fetchLabels]);
 
   // Fetch Slack channels
   useEffect(() => {
@@ -193,7 +204,7 @@ export function SettingsView() {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-12">
-        <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -201,31 +212,31 @@ export function SettingsView() {
   return (
     <div className="mx-auto max-w-2xl p-4 md:p-6">
       <h1 className="text-2xl font-bold">Settings</h1>
-      <p className="mt-1 text-sm text-slate-400">
+      <p className="mt-1 text-sm text-muted-foreground">
         Manage your calendar, notifications, and preferences.
       </p>
 
       {/* Google Calendar Section */}
-      <Card className="mt-6 border-slate-800 bg-slate-900 p-5">
+      <Card className="mt-6 border-border bg-card p-5">
         <div className="flex items-center gap-3">
-          <Calendar className="h-5 w-5 text-indigo-400" />
+          <Calendar className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-semibold">Google Calendar</h2>
         </div>
-        <Separator className="my-4 bg-slate-800" />
+        <Separator className="my-4 bg-border" />
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium">
               Status:{" "}
               <span
                 className={
-                  lastSyncedAt ? "text-green-400" : "text-slate-400"
+                  lastSyncedAt ? "text-success" : "text-muted-foreground"
                 }
               >
                 {lastSyncedAt ? "Connected" : "Not connected"}
               </span>
             </p>
             {lastSyncedAt && (
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 Last synced{" "}
                 {formatDistanceToNow(parseISO(lastSyncedAt), {
                   addSuffix: true,
@@ -238,7 +249,7 @@ export function SettingsView() {
             size="sm"
             onClick={handleSync}
             disabled={syncing}
-            className="border-slate-700 text-slate-300"
+            className="border-border text-secondary-foreground"
           >
             {syncing ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -251,17 +262,17 @@ export function SettingsView() {
       </Card>
 
       {/* Slack Section */}
-      <Card className="mt-4 border-slate-800 bg-slate-900 p-5">
+      <Card className="mt-4 border-border bg-card p-5">
         <div className="flex items-center gap-3">
-          <MessageSquare className="h-5 w-5 text-indigo-400" />
+          <MessageSquare className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-semibold">Slack Integration</h2>
         </div>
-        <Separator className="my-4 bg-slate-800" />
+        <Separator className="my-4 bg-border" />
 
         <div className="space-y-4">
           <div>
             <p className="text-sm font-medium">Monitored Channels</p>
-            <p className="mt-0.5 text-xs text-slate-500">
+            <p className="mt-0.5 text-xs text-muted-foreground">
               Add Slack channel IDs to scan for tasks. Find IDs in channel
               details.
             </p>
@@ -272,13 +283,13 @@ export function SettingsView() {
               {slackChannels.map((ch) => (
                 <span
                   key={ch}
-                  className="inline-flex items-center gap-1 rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-300"
+                  className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs text-secondary-foreground"
                 >
                   #{ch}
                   <button
                     type="button"
                     onClick={() => handleRemoveChannel(ch)}
-                    className="ml-1 text-slate-500 hover:text-red-400"
+                    className="ml-1 text-muted-foreground hover:text-destructive"
                   >
                     &times;
                   </button>
@@ -293,7 +304,7 @@ export function SettingsView() {
               value={newChannel}
               onChange={(e) => setNewChannel(e.target.value)}
               placeholder="Channel ID (e.g. C01ABC23DEF)"
-              className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none"
+              className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleAddChannel();
               }}
@@ -302,18 +313,18 @@ export function SettingsView() {
               variant="outline"
               size="sm"
               onClick={handleAddChannel}
-              className="border-slate-700 text-slate-300"
+              className="border-border text-secondary-foreground"
             >
               Add
             </Button>
           </div>
 
-          <Separator className="bg-slate-800" />
+          <Separator className="bg-border" />
 
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium">Manual Scan</p>
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 Scan configured channels now for task suggestions.
               </p>
             </div>
@@ -322,7 +333,7 @@ export function SettingsView() {
               size="sm"
               onClick={handleSlackScan}
               disabled={scanning || slackChannels.length === 0}
-              className="border-slate-700 text-slate-300"
+              className="border-border text-secondary-foreground"
             >
               {scanning ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -335,23 +346,102 @@ export function SettingsView() {
         </div>
       </Card>
 
-      {/* Notifications Section */}
-      <Card className="mt-4 border-slate-800 bg-slate-900 p-5">
+      {/* Labels Section */}
+      <Card className="mt-4 border-border bg-card p-5">
         <div className="flex items-center gap-3">
-          <Bell className="h-5 w-5 text-indigo-400" />
+          <Tag className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold">Labels</h2>
+        </div>
+        <Separator className="my-4 bg-border" />
+
+        <div className="space-y-3">
+          {labels.map((label) => (
+            <div key={label.id} className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span
+                  className="h-3 w-3 rounded-full"
+                  style={{ backgroundColor: label.color }}
+                />
+                <span className="text-sm">{label.name}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => deleteLabel(label.id)}
+                className="rounded-md p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+
+          {/* Add label form */}
+          <div className="flex items-center gap-2 pt-2">
+            <div className="flex gap-1">
+              {["#6366f1", "#ec4899", "#f59e0b", "#22c55e", "#3b82f6", "#ef4444", "#8b5cf6", "#14b8a6"].map(
+                (color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setNewLabelColor(color)}
+                    className={cn(
+                      "h-6 w-6 rounded-full transition-transform",
+                      newLabelColor === color && "scale-110 ring-2 ring-primary ring-offset-2 ring-offset-card"
+                    )}
+                    style={{ backgroundColor: color }}
+                  />
+                )
+              )}
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newLabelName}
+              onChange={(e) => setNewLabelName(e.target.value)}
+              placeholder="Label name"
+              className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+              onKeyDown={async (e) => {
+                if (e.key === "Enter" && newLabelName.trim()) {
+                  await createLabel({ name: newLabelName.trim(), color: newLabelColor });
+                  setNewLabelName("");
+                }
+              }}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                if (newLabelName.trim()) {
+                  await createLabel({ name: newLabelName.trim(), color: newLabelColor });
+                  setNewLabelName("");
+                }
+              }}
+              disabled={!newLabelName.trim()}
+              className="border-border text-secondary-foreground"
+            >
+              Add
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {/* Notifications Section */}
+      <Card className="mt-4 border-border bg-card p-5">
+        <div className="flex items-center gap-3">
+          <Bell className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-semibold">Notifications</h2>
         </div>
-        <Separator className="my-4 bg-slate-800" />
+        <Separator className="my-4 bg-border" />
 
         {/* Push Notifications */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Smartphone className="h-4 w-4 text-slate-400" />
+              <Smartphone className="h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="text-sm font-medium">Push notifications</p>
                 {!pushSupported && (
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     Not supported in this browser
                   </p>
                 )}
@@ -364,12 +454,12 @@ export function SettingsView() {
             />
           </div>
 
-          <Separator className="bg-slate-800" />
+          <Separator className="bg-border" />
 
           {/* Email Notifications */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Mail className="h-4 w-4 text-slate-400" />
+              <Mail className="h-4 w-4 text-muted-foreground" />
               <p className="text-sm font-medium">Email notifications</p>
             </div>
             <Toggle
@@ -381,21 +471,21 @@ export function SettingsView() {
           {prefs.email_enabled && (
             <div className="ml-7 space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-slate-300">Morning plan email</p>
+                <p className="text-sm text-secondary-foreground">Morning plan email</p>
                 <Toggle
                   checked={prefs.email_morning_plan}
                   onChange={(val) => updatePref("email_morning_plan", val)}
                 />
               </div>
               <div className="flex items-center justify-between">
-                <p className="text-sm text-slate-300">EOD report email</p>
+                <p className="text-sm text-secondary-foreground">EOD report email</p>
                 <Toggle
                   checked={prefs.email_eod_report}
                   onChange={(val) => updatePref("email_eod_report", val)}
                 />
               </div>
               <div className="flex items-center justify-between">
-                <p className="text-sm text-slate-300">Task reminder emails</p>
+                <p className="text-sm text-secondary-foreground">Task reminder emails</p>
                 <Toggle
                   checked={prefs.email_task_reminders}
                   onChange={(val) => updatePref("email_task_reminders", val)}
@@ -404,12 +494,12 @@ export function SettingsView() {
             </div>
           )}
 
-          <Separator className="bg-slate-800" />
+          <Separator className="bg-border" />
 
           {/* In-App Notifications */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Bell className="h-4 w-4 text-slate-400" />
+              <Bell className="h-4 w-4 text-muted-foreground" />
               <p className="text-sm font-medium">In-app notifications</p>
             </div>
             <Toggle
@@ -421,11 +511,11 @@ export function SettingsView() {
       </Card>
 
       {/* Test Notification */}
-      <Card className="mt-4 border-slate-800 bg-slate-900 p-5">
+      <Card className="mt-4 border-border bg-card p-5">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium">Test notification</p>
-            <p className="mt-0.5 text-xs text-slate-500">
+            <p className="mt-0.5 text-xs text-muted-foreground">
               Send a test in-app notification to verify your setup.
             </p>
           </div>
@@ -434,7 +524,7 @@ export function SettingsView() {
             size="sm"
             onClick={handleTestNotification}
             disabled={sendingTest}
-            className="border-slate-700 text-slate-300"
+            className="border-border text-secondary-foreground"
           >
             {sendingTest ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
