@@ -44,6 +44,8 @@ export interface AutoCompleteJobData {
 
 export interface CalendarSyncJobData {
   userId: string;
+  timeMin?: string;
+  timeMax?: string;
 }
 
 export interface NotificationDispatchJobData {

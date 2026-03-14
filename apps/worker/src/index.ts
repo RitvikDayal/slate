@@ -7,6 +7,7 @@ import { processScheduleShuffle } from "./jobs/schedule-shuffler";
 import { processEodReport } from "./jobs/eod-report";
 import { processSmartEstimate } from "./jobs/smart-estimate";
 import { processAutoComplete } from "./jobs/auto-complete";
+import { processCalendarSync } from "./jobs/calendar-sync";
 import { startCronScheduler } from "./cron/scheduler";
 
 console.log("Starting AI Todo Worker...");
@@ -54,6 +55,23 @@ const notificationWorker = new Worker(
   { connection: createRedisConnection(), concurrency: 10 }
 );
 
+const calendarWorker = new Worker(
+  QUEUE_NAMES.CALENDAR,
+  async (job) => {
+    console.log(`Processing calendar job ${job.name} (${job.id})`);
+    switch (job.name) {
+      case JOB_NAMES.CALENDAR_SYNC:
+        return processCalendarSync(job);
+      default:
+        throw new Error(`Unknown calendar job name: ${job.name}`);
+    }
+  },
+  {
+    connection: createRedisConnection(),
+    concurrency: 3,
+  }
+);
+
 aiWorker.on("failed", (job, err) => {
   console.error(`AI job ${job?.name} (${job?.id}) failed:`, err.message);
 });
@@ -63,6 +81,15 @@ aiWorker.on("completed", (job) => {
 notificationWorker.on("failed", (job, err) => {
   console.error(`Notification job (${job?.id}) failed:`, err.message);
 });
+calendarWorker.on("failed", (job, err) => {
+  console.error(
+    `Calendar job ${job?.name} (${job?.id}) failed:`,
+    err.message
+  );
+});
+calendarWorker.on("completed", (job) => {
+  console.log(`Calendar job ${job.name} (${job.id}) completed`);
+});
 
 startCronScheduler();
 console.log("Worker started. Listening for jobs...");
@@ -71,6 +98,7 @@ async function shutdown() {
   console.log("Shutting down worker...");
   await aiWorker.close();
   await notificationWorker.close();
+  await calendarWorker.close();
   process.exit(0);
 }
 
