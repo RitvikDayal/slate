@@ -45,7 +45,7 @@ export function UpcomingView() {
     <div className="flex min-h-full flex-col">
       {/* Header */}
       <div className="flex items-center gap-3 px-5 pb-4 pt-8">
-        <CalendarClock className="h-6 w-6 text-primary" />
+        <CalendarClock className="h-6 w-6 text-amber-400" />
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
           Upcoming
         </h1>

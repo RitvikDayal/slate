@@ -60,7 +60,7 @@ export function TodayView() {
         animate="visible"
       >
         <div className="flex items-center gap-3">
-          <CalendarCheck className="h-6 w-6 text-primary" />
+          <CalendarCheck className="h-6 w-6 text-emerald-400" />
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
               {format(new Date(), "EEEE")}

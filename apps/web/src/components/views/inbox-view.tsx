@@ -35,7 +35,7 @@ export function InboxView() {
         initial="hidden"
         animate="visible"
       >
-        <Inbox className="h-6 w-6 text-primary" />
+        <Inbox className="h-6 w-6 text-blue-400" />
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
           Inbox
         </h1>

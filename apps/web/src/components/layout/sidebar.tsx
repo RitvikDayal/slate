@@ -40,20 +40,20 @@ import { layoutSpring } from "@/lib/animations";
 import { SlateLogo, SlateIcon } from "@/components/brand/slate-logo";
 
 const presetViews = [
-  { slug: "high-priority", label: "High Priority", icon: AlertTriangle },
-  { slug: "due-this-week", label: "Due This Week", icon: CalendarRange },
-  { slug: "overdue", label: "Overdue", icon: Clock },
-  { slug: "no-date", label: "No Date", icon: CircleSlash },
-  { slug: "completed", label: "Completed", icon: CheckCircle },
+  { slug: "high-priority", label: "High Priority", icon: AlertTriangle, iconColor: "text-red-400" },
+  { slug: "due-this-week", label: "Due This Week", icon: CalendarRange, iconColor: "text-sky-400" },
+  { slug: "overdue", label: "Overdue", icon: Clock, iconColor: "text-orange-400" },
+  { slug: "no-date", label: "No Date", icon: CircleSlash, iconColor: "text-zinc-400" },
+  { slug: "completed", label: "Completed", icon: CheckCircle, iconColor: "text-emerald-400" },
 ];
 
 const smartLists = [
-  { href: "/inbox", label: "Inbox", icon: Inbox },
-  { href: "/today", label: "Today", icon: CalendarCheck },
-  { href: "/upcoming", label: "Upcoming", icon: CalendarClock },
-  { href: "/calendar", label: "Calendar", icon: Calendar },
-  { href: "/chat", label: "Chat", icon: MessageCircle },
-  { href: "/reports", label: "Reports", icon: BarChart3 },
+  { href: "/inbox", label: "Inbox", icon: Inbox, iconColor: "text-blue-400" },
+  { href: "/today", label: "Today", icon: CalendarCheck, iconColor: "text-emerald-400" },
+  { href: "/upcoming", label: "Upcoming", icon: CalendarClock, iconColor: "text-amber-400" },
+  { href: "/calendar", label: "Calendar", icon: Calendar, iconColor: "text-purple-400" },
+  { href: "/chat", label: "Chat", icon: MessageCircle, iconColor: "text-pink-400" },
+  { href: "/reports", label: "Reports", icon: BarChart3, iconColor: "text-teal-400" },
 ];
 
 function SortableListItem({
@@ -205,7 +205,7 @@ export function Sidebar({ user }: { user: User }) {
                   transition={layoutSpring}
                 />
               )}
-              <item.icon className="relative h-[18px] w-[18px] shrink-0" />
+              <item.icon className={cn("relative h-[18px] w-[18px] shrink-0", !isActive && item.iconColor)} />
               {!sidebarCollapsed && <span className="relative">{item.label}</span>}
             </Link>
           );
@@ -317,7 +317,7 @@ export function Sidebar({ user }: { user: User }) {
                   transition={layoutSpring}
                 />
               )}
-              <view.icon className="relative h-[18px] w-[18px] shrink-0" />
+              <view.icon className={cn("relative h-[18px] w-[18px] shrink-0", !isActive && view.iconColor)} />
               {!sidebarCollapsed && (
                 <span className="relative">{view.label}</span>
               )}

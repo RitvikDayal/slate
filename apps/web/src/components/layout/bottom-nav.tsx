@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Inbox,
   CalendarCheck,
@@ -21,23 +21,27 @@ import { CreateTaskModal } from "@/components/tasks/create-task-modal";
 import { useListStore } from "@/stores/list-store";
 
 const primaryNav = [
-  { href: "/inbox", label: "Inbox", icon: Inbox },
-  { href: "/today", label: "Today", icon: CalendarCheck },
-  { href: "/upcoming", label: "Upcoming", icon: CalendarClock },
+  { href: "/inbox", label: "Inbox", icon: Inbox, iconColor: "text-blue-400" },
+  { href: "/today", label: "Today", icon: CalendarCheck, iconColor: "text-emerald-400" },
+  { href: "/upcoming", label: "Upcoming", icon: CalendarClock, iconColor: "text-amber-400" },
 ];
 
 const moreItems = [
-  { href: "/calendar", label: "Calendar", icon: Calendar },
-  { href: "/chat", label: "Chat", icon: MessageCircle },
-  { href: "/reports", label: "Reports", icon: BarChart3 },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/calendar", label: "Calendar", icon: Calendar, iconColor: "text-purple-400" },
+  { href: "/chat", label: "Chat", icon: MessageCircle, iconColor: "text-pink-400" },
+  { href: "/reports", label: "Reports", icon: BarChart3, iconColor: "text-teal-400" },
+  { href: "/settings", label: "Settings", icon: Settings, iconColor: "text-zinc-400" },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
+  const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const { lists } = useListStore();
+  const [isCreatingList, setIsCreatingList] = useState(false);
+  const [newListName, setNewListName] = useState("");
+  const newListInputRef = useRef<HTMLInputElement>(null);
+  const { lists, createList } = useListStore();
 
   const userLists = lists.filter((l) => !l.is_inbox && !l.is_archived);
 
@@ -123,7 +127,7 @@ export function BottomNav() {
                             : "text-muted-foreground active:bg-muted"
                         )}
                       >
-                        <item.icon className="h-5 w-5" />
+                        <item.icon className={cn("h-5 w-5", !isActive && item.iconColor)} />
                         <span>{item.label}</span>
                       </Link>
                     );
@@ -132,11 +136,11 @@ export function BottomNav() {
               </div>
 
               {/* User lists */}
-              {userLists.length > 0 && (
-                <div className="px-4 pb-2 pt-1">
-                  <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    Lists
-                  </p>
+              <div className="px-4 pb-2 pt-1">
+                <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  Lists
+                </p>
+                {userLists.length > 0 && (
                   <div className="grid grid-cols-2 gap-1">
                     {userLists.slice(0, 6).map((list) => {
                       const isActive = pathname === `/list/${list.id}`;
@@ -169,8 +173,53 @@ export function BottomNav() {
                       );
                     })}
                   </div>
-                </div>
-              )}
+                )}
+
+                {/* New list creation */}
+                {isCreatingList ? (
+                  <div className="mt-2 px-1">
+                    <input
+                      ref={newListInputRef}
+                      type="text"
+                      value={newListName}
+                      onChange={(e) => setNewListName(e.target.value)}
+                      onKeyDown={async (e) => {
+                        if (e.key === "Enter" && newListName.trim()) {
+                          const list = await createList({ title: newListName.trim() });
+                          setNewListName("");
+                          setIsCreatingList(false);
+                          setMoreOpen(false);
+                          router.push(`/list/${list.id}`);
+                        }
+                        if (e.key === "Escape") {
+                          setNewListName("");
+                          setIsCreatingList(false);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (!newListName.trim()) {
+                          setNewListName("");
+                          setIsCreatingList(false);
+                        }
+                      }}
+                      placeholder="List name..."
+                      className="w-full rounded-lg border border-primary/30 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                    />
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCreatingList(true);
+                      setTimeout(() => newListInputRef.current?.focus(), 50);
+                    }}
+                    className="mt-1 flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors active:bg-muted"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>New List</span>
+                  </button>
+                )}
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -182,8 +231,8 @@ export function BottomNav() {
         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       >
         <div className="flex items-stretch border-t border-border/60 bg-background/90 backdrop-blur-xl">
-          {/* Primary nav items */}
-          {primaryNav.map((item) => {
+          {/* Left nav items: Inbox, Today */}
+          {primaryNav.slice(0, 2).map((item) => {
             const isActive = pathname.startsWith(item.href);
             return (
               <Link
@@ -198,7 +247,7 @@ export function BottomNav() {
                 <item.icon
                   className={cn(
                     "h-[22px] w-[22px] transition-transform",
-                    isActive && "scale-110"
+                    isActive ? "scale-110" : item.iconColor
                   )}
                   strokeWidth={isActive ? 2.5 : 1.8}
                 />
@@ -219,6 +268,31 @@ export function BottomNav() {
               <Plus className="h-5 w-5" strokeWidth={2.5} />
             </motion.button>
           </div>
+
+          {/* Right nav items: Upcoming */}
+          {primaryNav.slice(2).map((item) => {
+            const isActive = pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                prefetch
+                className={cn(
+                  "flex flex-1 flex-col items-center justify-center gap-1 py-2.5 text-[11px] font-medium transition-colors",
+                  isActive ? "text-primary" : "text-muted-foreground"
+                )}
+              >
+                <item.icon
+                  className={cn(
+                    "h-[22px] w-[22px] transition-transform",
+                    isActive ? "scale-110" : item.iconColor
+                  )}
+                  strokeWidth={isActive ? 2.5 : 1.8}
+                />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
 
           {/* More button */}
           <button
