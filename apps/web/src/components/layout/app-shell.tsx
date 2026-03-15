@@ -20,6 +20,7 @@ import { GripVertical } from "lucide-react";
 import { Sidebar } from "./sidebar";
 import { BottomNav } from "./bottom-nav";
 import { DetailPanel } from "./detail-panel";
+import { PageTransition } from "./page-transition";
 import { CommandPalette } from "@/components/search/command-palette";
 import { registerShortcut, initShortcuts } from "@/lib/shortcuts";
 import { useItemStore } from "@/stores/item-store";
@@ -206,7 +207,7 @@ export function AppShell({
         </motion.aside>
         <div className="flex min-h-0 flex-1 flex-col">
           <main className="flex-1 overflow-y-auto pb-[calc(128px+env(safe-area-inset-bottom,0px))] md:pb-0">
-            {children}
+            <PageTransition>{children}</PageTransition>
           </main>
         </div>
         <AnimatePresence>

@@ -112,7 +112,7 @@ export function TaskItem({ item, depth = 0, childItems = [] }: TaskItemProps) {
           type="button"
           {...attributes}
           {...listeners}
-          className="flex h-4 w-4 shrink-0 cursor-grab items-center justify-center text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 active:cursor-grabbing"
+          className="flex h-4 w-4 shrink-0 cursor-grab items-center justify-center text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 [@media(pointer:coarse)]:opacity-40 active:cursor-grabbing"
         >
           <GripVertical className="h-3.5 w-3.5" />
         </button>

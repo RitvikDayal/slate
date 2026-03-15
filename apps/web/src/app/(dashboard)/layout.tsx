@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "@/lib/api/auth";
 import { AppShell } from "@/components/layout/app-shell";
 import { SyncProvider } from "@/components/providers/sync-provider";
+import { MotionConfigProvider } from "@/components/providers/motion-config-provider";
 
 export default async function DashboardLayout({
   children,
@@ -16,8 +17,10 @@ export default async function DashboardLayout({
   }
 
   return (
-    <SyncProvider>
-      <AppShell user={user}>{children}</AppShell>
-    </SyncProvider>
+    <MotionConfigProvider>
+      <SyncProvider>
+        <AppShell user={user}>{children}</AppShell>
+      </SyncProvider>
+    </MotionConfigProvider>
   );
 }

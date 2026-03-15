@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, type PanInfo } from "framer-motion";
 import { X } from "lucide-react";
 import { panelEnter } from "@/lib/animations";
 import { useUIStore } from "@/stores/ui-store";
@@ -13,10 +13,15 @@ import { cn } from "@/lib/utils";
 export function DetailPanel() {
   const { setDetailPanelOpen } = useUIStore();
   const { selectedItemId, items } = useItemStore();
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
 
   const selectedItem = items.find((i) => i.id === selectedItemId) ?? null;
 
   const pathname = usePathname();
+
+  useEffect(() => {
+    setIsTouchDevice(window.matchMedia("(pointer: coarse)").matches);
+  }, []);
 
   const handleClose = useCallback(() => {
     setDetailPanelOpen(false);
@@ -41,6 +46,15 @@ export function DetailPanel() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [handleClose]);
 
+  const handleDragEnd = useCallback(
+    (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+      if (info.offset.x > 100) {
+        handleClose();
+      }
+    },
+    [handleClose]
+  );
+
   return (
     <>
       {/* Mobile backdrop */}
@@ -62,7 +76,18 @@ export function DetailPanel() {
         initial="hidden"
         animate="visible"
         exit="exit"
+        drag={isTouchDevice ? "x" : false}
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.2}
+        onDragEnd={handleDragEnd}
       >
+        {/* Mobile grab handle */}
+        {isTouchDevice && (
+          <div className="flex justify-center py-2 md:hidden">
+            <div className="h-1 w-8 rounded-full bg-muted-foreground/30" />
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h2 className="text-sm font-semibold text-foreground">
@@ -73,7 +98,7 @@ export function DetailPanel() {
             onClick={handleClose}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.9 }}
-            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted"
+            className="rounded-lg p-2.5 text-muted-foreground transition-colors hover:bg-muted"
           >
             <X className="h-4 w-4" />
           </motion.button>

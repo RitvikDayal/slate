@@ -216,8 +216,13 @@ export function SettingsView() {
         Manage your calendar, notifications, and preferences.
       </p>
 
+      {/* Section: Integrations */}
+      <p className="mt-8 mb-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+        Integrations
+      </p>
+
       {/* Google Calendar Section */}
-      <Card className="mt-6 border-border bg-card p-5">
+      <Card className="border-border bg-card p-5">
         <div className="flex items-center gap-3">
           <Calendar className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-semibold">Google Calendar</h2>
@@ -346,8 +351,13 @@ export function SettingsView() {
         </div>
       </Card>
 
+      {/* Section: Customization */}
+      <p className="mt-8 mb-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+        Customization
+      </p>
+
       {/* Labels Section */}
-      <Card className="mt-4 border-border bg-card p-5">
+      <Card className="border-border bg-card p-5">
         <div className="flex items-center gap-3">
           <Tag className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-semibold">Labels</h2>
@@ -425,8 +435,13 @@ export function SettingsView() {
         </div>
       </Card>
 
+      {/* Section: Notifications */}
+      <p className="mt-8 mb-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+        Notifications
+      </p>
+
       {/* Notifications Section */}
-      <Card className="mt-4 border-border bg-card p-5">
+      <Card className="border-border bg-card p-5">
         <div className="flex items-center gap-3">
           <Bell className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-semibold">Notifications</h2>

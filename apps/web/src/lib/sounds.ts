@@ -40,12 +40,14 @@ function playTone(frequency: number, duration: number, gain: number, type: Oscil
 export function playCreate() {
   playTone(880, 0.12, 0.15, "sine");
   setTimeout(() => playTone(1100, 0.1, 0.12, "sine"), 60);
+  haptic("light");
 }
 
 /** Satisfying completion ping */
 export function playComplete() {
   playTone(660, 0.08, 0.12, "sine");
   setTimeout(() => playTone(990, 0.15, 0.1, "sine"), 50);
+  haptic("light");
 }
 
 /** Reverse completion — soft descending tone */
@@ -57,4 +59,18 @@ export function playUncomplete() {
 /** Soft delete/dismiss sound */
 export function playDelete() {
   playTone(440, 0.1, 0.08, "triangle");
+}
+
+/** Celebration — 3-note ascending arpeggio for all-tasks-complete */
+export function playAllComplete() {
+  playTone(660, 0.12, 0.12, "sine");
+  setTimeout(() => playTone(880, 0.12, 0.1, "sine"), 60);
+  setTimeout(() => playTone(1100, 0.15, 0.1, "sine"), 120);
+}
+
+/** Trigger device haptic feedback if available */
+export function haptic(style: "light" | "medium" = "light") {
+  if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+    navigator.vibrate(style === "light" ? 10 : 20);
+  }
 }

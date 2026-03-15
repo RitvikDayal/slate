@@ -84,3 +84,17 @@ export const pageHeaderVariants: Variants = {
     transition: { duration: 0.2, ease: "easeOut" },
   },
 };
+
+/** Page transition wrapper */
+export const pageTransition: Variants = {
+  initial: { opacity: 0, y: 6 },
+  animate: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.2, ease: "easeOut" },
+  },
+  exit: {
+    opacity: 0,
+    transition: { duration: 0.12 },
+  },
+};

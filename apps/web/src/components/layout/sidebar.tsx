@@ -114,7 +114,7 @@ function SortableListItem({
             type="button"
             {...attributes}
             {...listeners}
-            className="flex h-4 w-4 shrink-0 cursor-grab items-center justify-center text-muted-foreground opacity-0 transition-opacity group-hover/list-item:opacity-100 active:cursor-grabbing"
+            className="flex h-4 w-4 shrink-0 cursor-grab items-center justify-center text-muted-foreground opacity-0 transition-opacity group-hover/list-item:opacity-100 [@media(pointer:coarse)]:opacity-40 active:cursor-grabbing"
             onClick={(e) => e.preventDefault()}
           >
             <GripVertical className="h-3.5 w-3.5" />

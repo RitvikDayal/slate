@@ -89,7 +89,7 @@ export function NotificationBell() {
         variant="ghost"
         size="icon"
         onClick={() => setIsOpen(!isOpen)}
-        className="relative text-muted-foreground hover:text-foreground"
+        className="relative min-h-11 min-w-11 text-muted-foreground hover:text-foreground md:min-h-0 md:min-w-0"
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (

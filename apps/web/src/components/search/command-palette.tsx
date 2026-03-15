@@ -27,7 +27,7 @@ export function CommandPalette() {
   const items = useItemStore((s) => s.items);
   const lists = useListStore((s) => s.lists);
 
-  const results: SearchResult[] = query.trim()
+  const allResults: SearchResult[] = query.trim()
     ? [
         ...lists
           .filter((l) =>
@@ -43,7 +43,6 @@ export function CommandPalette() {
           .filter((i) =>
             i.title.toLowerCase().includes(query.toLowerCase())
           )
-          .slice(0, 20)
           .map((i) => ({
             id: i.id,
             title: i.title,
@@ -52,6 +51,9 @@ export function CommandPalette() {
           })),
       ]
     : [];
+
+  const results = allResults.slice(0, 20);
+  const totalCount = allResults.length;
 
   const open = useCallback(() => {
     setIsOpen(true);
@@ -185,6 +187,13 @@ export function CommandPalette() {
                     </button>
                   );
                 })}
+              </div>
+            )}
+
+            {/* Result cap message */}
+            {totalCount > 20 && (
+              <div className="border-t border-border px-4 py-2 text-center text-xs text-muted-foreground">
+                Showing 20 of {totalCount} — refine your search
               </div>
             )}
 

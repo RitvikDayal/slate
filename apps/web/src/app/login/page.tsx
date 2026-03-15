@@ -2,37 +2,62 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
+import { CalendarCheck, Sparkles, Calendar } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { SlateLogo } from "@/components/brand/slate-logo";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
+    setError(null);
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { error: authError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
         scopes: "email openid https://www.googleapis.com/auth/calendar.readonly",
       },
     });
-    if (error) {
-      console.error("Login error:", error.message);
+    if (authError) {
+      console.error("Login error:", authError.message);
+      setError(authError.message);
       setIsLoading(false);
     }
   };
 
+  const features = [
+    { icon: Sparkles, text: "AI-scheduled days" },
+    { icon: CalendarCheck, text: "Smart task capture" },
+    { icon: Calendar, text: "Calendar sync" },
+  ];
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="mx-auto w-full max-w-sm space-y-8 px-4">
+      <motion.div
+        className="mx-auto w-full max-w-sm space-y-8 px-4"
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+      >
         {/* Logo */}
         <div className="flex flex-col items-center text-center">
           <SlateLogo size="xl" />
           <p className="mt-2 text-sm text-muted-foreground">
             Your AI-powered daily planner
           </p>
+          {/* Feature bullets */}
+          <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
+            {features.map(({ icon: Icon, text }) => (
+              <span key={text} className="flex items-center gap-1.5">
+                <Icon className="h-3.5 w-3.5 text-primary/70" />
+                {text}
+              </span>
+            ))}
+          </div>
         </div>
 
         {/* Login card */}
@@ -62,6 +87,20 @@ export default function LoginPage() {
             </svg>
             {isLoading ? "Signing in..." : "Continue with Google"}
           </button>
+
+          {/* Error display */}
+          <AnimatePresence>
+            {error && (
+              <motion.p
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                className="mt-3 text-center text-sm text-destructive"
+              >
+                {error}
+              </motion.p>
+            )}
+          </AnimatePresence>
         </div>
 
         <p className="text-center text-xs text-muted-foreground">
@@ -81,7 +120,7 @@ export default function LoginPage() {
           </Link>
           .
         </p>
-      </div>
+      </motion.div>
     </div>
   );
 }

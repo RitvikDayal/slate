@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useItemStore } from "@/stores/item-store";
 import { useListStore } from "@/stores/list-store";
 import { useSchedule } from "@/lib/hooks/use-schedule";
@@ -9,16 +9,21 @@ import { TaskList } from "@/components/tasks/task-list";
 import { QuickAdd } from "@/components/tasks/quick-add";
 import { ScheduleTimeline } from "./schedule-timeline";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { WelcomeModal } from "@/components/onboarding/welcome-modal";
 import { Button } from "@/components/ui/button";
-import { CalendarCheck } from "lucide-react";
+import { CalendarCheck, Plus, Sparkles, Settings, Check } from "lucide-react";
 import { format } from "date-fns";
 import { floatingIcon, pageHeaderVariants } from "@/lib/animations";
+import { playAllComplete, haptic } from "@/lib/sounds";
+import { useRouter } from "next/navigation";
 
 export function TodayView() {
   const today = format(new Date(), "yyyy-MM-dd");
   const { items, isLoading, fetchTodayItems } = useItemStore();
   const { getInbox, lists, fetchLists } = useListStore();
   const { schedule, confirmSchedule } = useSchedule(today);
+  const router = useRouter();
+  const [celebrated, setCelebrated] = useState(false);
 
   useEffect(() => {
     fetchTodayItems();
@@ -31,6 +36,19 @@ export function TodayView() {
   const completedItems = items.filter((i) => i.is_completed);
   const doneCount = completedItems.length;
   const hasScheduledSection = scheduledItems.length > 0 || (schedule?.plan?.length ?? 0) > 0;
+
+  // All-tasks-complete celebration
+  const allDone = items.length > 0 && items.every((i) => i.is_completed);
+  useEffect(() => {
+    if (allDone && !celebrated) {
+      setCelebrated(true);
+      playAllComplete();
+      haptic("medium");
+    }
+    if (!allDone) {
+      setCelebrated(false);
+    }
+  }, [allDone, celebrated]);
 
   return (
     <div className="flex min-h-full flex-col">
@@ -119,7 +137,7 @@ export function TodayView() {
         {inbox?.id && <QuickAdd listId={inbox.id} defaultDueDate={today} />}
 
         {/* Completed */}
-        {completedItems.length > 0 && (
+        {completedItems.length > 0 && !allDone && (
           <section className="border-t border-border/50 pt-4">
             <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
               Completed
@@ -128,19 +146,92 @@ export function TodayView() {
           </section>
         )}
 
+        {/* All-tasks-complete celebration */}
+        <AnimatePresence>
+          {allDone && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="flex flex-1 flex-col items-center justify-center py-16 text-center"
+            >
+              <div className="relative">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                >
+                  <Check className="h-12 w-12 text-success" />
+                </motion.div>
+                {/* Burst particles */}
+                {[0, 60, 120, 180, 240, 300].map((angle, i) => (
+                  <motion.span
+                    key={angle}
+                    className="absolute left-1/2 top-1/2 h-2 w-2 rounded-full"
+                    style={{
+                      backgroundColor: ["var(--color-primary)", "var(--color-success)", "var(--color-warning)"][i % 3],
+                    }}
+                    initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+                    animate={{
+                      x: Math.cos((angle * Math.PI) / 180) * 40,
+                      y: Math.sin((angle * Math.PI) / 180) * 40,
+                      opacity: 0,
+                      scale: 0,
+                    }}
+                    transition={{ duration: 0.6, delay: 0.1 }}
+                  />
+                ))}
+              </div>
+              <p className="mt-4 text-lg font-semibold text-foreground">All done!</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {doneCount} task{doneCount !== 1 ? "s" : ""} completed today
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Empty state */}
         {!isLoading && items.length === 0 && !schedule?.plan?.length && (
           <div className="flex flex-1 flex-col items-center justify-center py-24 text-center">
-            <motion.div variants={floatingIcon} animate="animate">
+            <motion.div variants={floatingIcon} initial="hidden" animate="visible">
               <CalendarCheck className="mb-3 h-10 w-10 text-muted-foreground/30" />
             </motion.div>
             <p className="font-medium text-foreground">Nothing planned for today</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Enjoy the calm, or add a task below
+              Get started with one of these actions
             </p>
+            <div className="mt-5 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent("open-create-modal"))}
+                className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <Plus className="h-4 w-4" />
+                Add a task
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/chat")}
+                className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <Sparkles className="h-4 w-4" />
+                Ask AI to plan
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/settings")}
+                className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <Settings className="h-4 w-4" />
+                Sync calendar
+              </button>
+            </div>
           </div>
         )}
       </div>
+
+      {/* Onboarding modal */}
+      <WelcomeModal />
     </div>
   );
 }

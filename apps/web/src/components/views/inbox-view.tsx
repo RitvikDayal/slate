@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { Inbox } from "lucide-react";
+import { Inbox, Plus } from "lucide-react";
 import { useListStore } from "@/stores/list-store";
 import { useItemStore } from "@/stores/item-store";
 import { TaskList } from "@/components/tasks/task-list";
@@ -53,7 +53,7 @@ export function InboxView() {
             {Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={i}
-                className="h-10 animate-pulse rounded-lg bg-muted/50"
+                className="h-10 shimmer rounded-lg bg-muted/50"
               />
             ))}
           </div>
@@ -61,9 +61,7 @@ export function InboxView() {
           <>
             <TaskList items={activeItems} listId={inbox?.id} />
 
-            <div className="hidden md:block">
-              {inbox?.id && <QuickAdd listId={inbox.id} />}
-            </div>
+            {inbox?.id && <QuickAdd listId={inbox.id} />}
 
             {completedItems.length > 0 && (
               <div className="mt-4 border-t border-border/50 pt-4">
@@ -76,13 +74,21 @@ export function InboxView() {
 
             {!isLoading && items.length === 0 && (
               <div className="flex flex-1 flex-col items-center justify-center py-24 text-center">
-                <motion.div variants={floatingIcon} animate="animate">
+                <motion.div variants={floatingIcon} initial="hidden" animate="visible">
                   <Inbox className="mb-3 h-10 w-10 text-muted-foreground/30" />
                 </motion.div>
                 <p className="font-medium text-foreground">Inbox zero</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Capture tasks quickly — sort them later
+                <p className="mt-1 max-w-xs text-sm text-muted-foreground">
+                  Tasks from quick-add, Slack, and email land here
                 </p>
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent("open-create-modal"))}
+                  className="mt-4 flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add your first task
+                </button>
               </div>
             )}
           </>
