@@ -53,7 +53,7 @@ export function UpcomingView() {
 
       {/* Content */}
       <div className="flex flex-1 flex-col gap-6 px-2">
-        {isLoading ? (
+        {isLoading && items.length === 0 ? (
           <div className="space-y-2 px-3 py-4">
             {Array.from({ length: 5 }).map((_, i) => (
               <div

@@ -75,7 +75,38 @@ export type {
   SyncQueueEntry,
 };
 
-import type { Item } from "@ai-todo/shared";
+import type { Item, List } from "@ai-todo/shared";
+
+export function toLocalList(list: List): LocalList {
+  return {
+    id: list.id,
+    userId: list.user_id,
+    title: list.title,
+    icon: list.icon,
+    color: list.color,
+    position: list.position,
+    parentListId: list.parent_list_id,
+    isInbox: list.is_inbox,
+    isArchived: list.is_archived,
+    updatedAt: list.updated_at,
+  };
+}
+
+export function fromLocalList(local: LocalList): List {
+  return {
+    id: local.id,
+    user_id: local.userId,
+    title: local.title,
+    icon: local.icon,
+    color: local.color,
+    position: local.position,
+    parent_list_id: local.parentListId,
+    is_inbox: local.isInbox,
+    is_archived: local.isArchived,
+    created_at: local.updatedAt,
+    updated_at: local.updatedAt,
+  };
+}
 
 export function toLocalItem(item: Item): LocalItem {
   return {

@@ -25,22 +25,44 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const { data, error: dbError } = await supabase
-    .from("calendar_events")
-    .select(
-      "id, google_event_id, title, description, start_time, end_time, is_all_day, location, synced_at"
-    )
-    .eq("user_id", user!.id)
-    .gte("start_time", `${start}T00:00:00`)
-    .lte("start_time", `${end}T23:59:59`)
-    .order("start_time", { ascending: true });
+  const [eventsResult, tasksResult] = await Promise.all([
+    supabase
+      .from("calendar_events")
+      .select(
+        "id, google_event_id, title, description, start_time, end_time, is_all_day, location, synced_at"
+      )
+      .eq("user_id", user!.id)
+      .gte("start_time", `${start}T00:00:00`)
+      .lte("start_time", `${end}T23:59:59`)
+      .order("start_time", { ascending: true }),
+    supabase
+      .from("items")
+      .select(
+        "id, title, due_date, scheduled_date, scheduled_start, scheduled_end, is_completed, priority"
+      )
+      .eq("user_id", user!.id)
+      .eq("is_archived", false)
+      .or(
+        `and(due_date.gte.${start},due_date.lte.${end}),and(scheduled_date.gte.${start},scheduled_date.lte.${end})`
+      ),
+  ]);
 
-  if (dbError) {
+  if (eventsResult.error) {
     return NextResponse.json(
       { error: "Failed to fetch calendar events" },
       { status: 500 }
     );
   }
 
-  return NextResponse.json({ events: data });
+  if (tasksResult.error) {
+    return NextResponse.json(
+      { error: "Failed to fetch tasks" },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({
+    events: eventsResult.data,
+    tasks: tasksResult.data,
+  });
 }

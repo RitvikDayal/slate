@@ -21,6 +21,36 @@ export const useLabelStore = create<LabelStore>((set) => ({
       const res = await fetch("/api/labels");
       if (res.ok) {
         const labels: Label[] = await res.json();
+
+        // Auto-seed default labels for new users (one-time per device)
+        if (
+          labels.length === 0 &&
+          typeof window !== "undefined" &&
+          !localStorage.getItem("slate-labels-seeded")
+        ) {
+          const { DEFAULT_LABELS } = await import(
+            "@/lib/constants/default-labels"
+          );
+          const created: Label[] = [];
+          for (const def of DEFAULT_LABELS) {
+            try {
+              const createRes = await fetch("/api/labels", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(def),
+              });
+              if (createRes.ok) {
+                created.push(await createRes.json());
+              }
+            } catch {
+              // Continue with remaining labels
+            }
+          }
+          localStorage.setItem("slate-labels-seeded", "1");
+          set({ labels: created, isLoading: false });
+          return;
+        }
+
         set({ labels, isLoading: false });
         return;
       }

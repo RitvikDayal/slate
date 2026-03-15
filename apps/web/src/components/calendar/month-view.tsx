@@ -13,17 +13,32 @@ import {
   parseISO,
 } from "date-fns";
 import { cn } from "@/lib/utils";
+import { CheckCircle2, Circle } from "lucide-react";
 import type { CalendarEvent } from "@ai-todo/shared";
+import type { CalendarTask } from "@/lib/hooks/use-calendar-events";
 
 interface MonthViewProps {
   events: CalendarEvent[];
+  tasks: CalendarTask[];
   currentDate: Date;
   onDayClick: (date: Date) => void;
 }
 
 const MAX_VISIBLE = 3;
 
-export function MonthView({ events, currentDate, onDayClick }: MonthViewProps) {
+function getTaskDateForDay(task: CalendarTask, day: Date): boolean {
+  if (task.scheduled_date && isSameDay(parseISO(task.scheduled_date), day))
+    return true;
+  if (task.due_date && isSameDay(parseISO(task.due_date), day)) return true;
+  return false;
+}
+
+export function MonthView({
+  events,
+  tasks,
+  currentDate,
+  onDayClick,
+}: MonthViewProps) {
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const calStart = startOfWeek(monthStart, { weekStartsOn: 1 });
@@ -65,8 +80,13 @@ export function MonthView({ events, currentDate, onDayClick }: MonthViewProps) {
               const dayEvents = events.filter((e) =>
                 isSameDay(parseISO(e.start_time), d)
               );
-              const visible = dayEvents.slice(0, MAX_VISIBLE);
-              const overflow = dayEvents.length - MAX_VISIBLE;
+              const dayTasks = tasks.filter((t) => getTaskDateForDay(t, d));
+              const allItems = [
+                ...dayEvents.map((e) => ({ type: "event" as const, item: e })),
+                ...dayTasks.map((t) => ({ type: "task" as const, item: t })),
+              ];
+              const visible = allItems.slice(0, MAX_VISIBLE);
+              const overflow = allItems.length - MAX_VISIBLE;
 
               return (
                 <div
@@ -86,14 +106,32 @@ export function MonthView({ events, currentDate, onDayClick }: MonthViewProps) {
                   >
                     {format(d, "d")}
                   </p>
-                  {visible.map((e) => (
-                    <div
-                      key={e.id}
-                      className="mb-0.5 truncate rounded bg-accent/20 px-1 py-0.5 text-[10px] text-accent-foreground"
-                    >
-                      {e.title}
-                    </div>
-                  ))}
+                  {visible.map((entry) =>
+                    entry.type === "event" ? (
+                      <div
+                        key={entry.item.id}
+                        className="mb-0.5 truncate rounded bg-accent/20 px-1 py-0.5 text-[10px] text-accent-foreground"
+                      >
+                        {entry.item.title}
+                      </div>
+                    ) : (
+                      <div
+                        key={entry.item.id}
+                        className={cn(
+                          "mb-0.5 flex items-center gap-0.5 truncate rounded bg-emerald-500/15 px-1 py-0.5 text-[10px] text-emerald-600 dark:text-emerald-400",
+                          (entry.item as CalendarTask).is_completed &&
+                            "line-through opacity-60"
+                        )}
+                      >
+                        {(entry.item as CalendarTask).is_completed ? (
+                          <CheckCircle2 className="h-2.5 w-2.5 shrink-0" />
+                        ) : (
+                          <Circle className="h-2.5 w-2.5 shrink-0" />
+                        )}
+                        {entry.item.title}
+                      </div>
+                    )
+                  )}
                   {overflow > 0 && (
                     <p className="text-[10px] text-muted-foreground">
                       +{overflow} more

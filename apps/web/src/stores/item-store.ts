@@ -32,7 +32,22 @@ export const useItemStore = create<ItemStore>((set, get) => ({
   selectedItemId: null,
 
   fetchItemsByList: async (listId) => {
-    set({ isLoading: true });
+    // 1. Serve cached items immediately
+    if (get().items.length === 0) {
+      try {
+        const cached = await db.items
+          .where("listId")
+          .equals(listId)
+          .toArray();
+        if (cached.length > 0) {
+          set({ items: cached.map((c) => fromLocalItem(c) as Item), isLoading: false });
+        }
+      } catch {
+        // Dexie read is non-critical
+      }
+    }
+
+    // 2. Revalidate from network
     try {
       const res = await fetch(`/api/items?list_id=${listId}`);
       if (res.ok) {
@@ -46,25 +61,29 @@ export const useItemStore = create<ItemStore>((set, get) => ({
         return;
       }
     } catch {
-      // Network error — fall through to Dexie fallback
-    }
-    try {
-      const cached = await db.items
-        .where("listId")
-        .equals(listId)
-        .toArray();
-      if (cached.length > 0) {
-        set({ items: cached.map((c) => fromLocalItem(c) as Item), isLoading: false });
-        return;
-      }
-    } catch {
-      // Dexie read is non-critical
+      // Network error — cached data (if any) is already showing
     }
     set({ isLoading: false });
   },
 
   fetchTodayItems: async () => {
-    set({ isLoading: true });
+    // 1. Serve cached items immediately
+    if (get().items.length === 0) {
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        const cached = await db.items
+          .where("dueDate")
+          .equals(today)
+          .toArray();
+        if (cached.length > 0) {
+          set({ items: cached.map((c) => fromLocalItem(c) as Item), isLoading: false });
+        }
+      } catch {
+        // Dexie read is non-critical
+      }
+    }
+
+    // 2. Revalidate from network
     try {
       const res = await fetch("/api/views/today");
       if (res.ok) {
@@ -78,26 +97,29 @@ export const useItemStore = create<ItemStore>((set, get) => ({
         return;
       }
     } catch {
-      // Network error — fall through to Dexie fallback
-    }
-    try {
-      const today = new Date().toISOString().slice(0, 10);
-      const cached = await db.items
-        .where("dueDate")
-        .equals(today)
-        .toArray();
-      if (cached.length > 0) {
-        set({ items: cached.map((c) => fromLocalItem(c) as Item), isLoading: false });
-        return;
-      }
-    } catch {
-      // Dexie read is non-critical
+      // Network error — cached data (if any) is already showing
     }
     set({ isLoading: false });
   },
 
   fetchUpcomingItems: async () => {
-    set({ isLoading: true });
+    // 1. Serve cached items immediately
+    if (get().items.length === 0) {
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        const cached = await db.items
+          .where("dueDate")
+          .above(today)
+          .toArray();
+        if (cached.length > 0) {
+          set({ items: cached.map((c) => fromLocalItem(c) as Item), isLoading: false });
+        }
+      } catch {
+        // Dexie read is non-critical
+      }
+    }
+
+    // 2. Revalidate from network
     try {
       const res = await fetch("/api/views/upcoming");
       if (res.ok) {
@@ -111,20 +133,7 @@ export const useItemStore = create<ItemStore>((set, get) => ({
         return;
       }
     } catch {
-      // Network error — fall through to Dexie fallback
-    }
-    try {
-      const today = new Date().toISOString().slice(0, 10);
-      const cached = await db.items
-        .where("dueDate")
-        .above(today)
-        .toArray();
-      if (cached.length > 0) {
-        set({ items: cached.map((c) => fromLocalItem(c) as Item), isLoading: false });
-        return;
-      }
-    } catch {
-      // Dexie read is non-critical
+      // Network error — cached data (if any) is already showing
     }
     set({ isLoading: false });
   },

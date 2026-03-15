@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import type { List, CreateListInput, UpdateListInput } from "@ai-todo/shared";
+import { db, toLocalList, fromLocalList } from "@/lib/db";
 
 interface ListStore {
   lists: List[];
@@ -22,14 +23,35 @@ export const useListStore = create<ListStore>((set, get) => ({
   selectedListId: null,
 
   fetchLists: async () => {
-    set({ isLoading: true });
-    const res = await fetch("/api/lists");
-    if (res.ok) {
-      const lists: List[] = await res.json();
-      set({ lists, isLoading: false });
-    } else {
-      set({ isLoading: false });
+    // 1. Serve cached lists immediately
+    if (get().lists.length === 0) {
+      try {
+        const cached = await db.lists.toArray();
+        if (cached.length > 0) {
+          set({ lists: cached.map(fromLocalList), isLoading: false });
+        }
+      } catch {
+        // Dexie read is non-critical
+      }
     }
+
+    // 2. Revalidate from network in background
+    try {
+      const res = await fetch("/api/lists");
+      if (res.ok) {
+        const lists: List[] = await res.json();
+        set({ lists, isLoading: false });
+        try {
+          await db.lists.bulkPut(lists.map(toLocalList));
+        } catch {
+          // Dexie cache write is non-critical
+        }
+        return;
+      }
+    } catch {
+      // Network error — cached data (if any) is already showing
+    }
+    set({ isLoading: false });
   },
 
   createList: async (data) => {

@@ -36,7 +36,7 @@ export function CalendarView() {
   const startStr = format(rangeStart, "yyyy-MM-dd");
   const endStr = format(rangeEnd, "yyyy-MM-dd");
 
-  const { events } = useCalendarEvents(startStr, endStr);
+  const { events, tasks } = useCalendarEvents(startStr, endStr);
 
   const goToday = () => setCurrentDate(new Date());
   const goPrev = () =>
@@ -114,10 +114,11 @@ export function CalendarView() {
       {/* View */}
       <div className="flex-1 overflow-auto">
         {viewMode === "week" ? (
-          <WeekView events={events} startDate={rangeStart} />
+          <WeekView events={events} tasks={tasks} startDate={rangeStart} />
         ) : (
           <MonthView
             events={events}
+            tasks={tasks}
             currentDate={currentDate}
             onDayClick={(date) => {
               setCurrentDate(date);

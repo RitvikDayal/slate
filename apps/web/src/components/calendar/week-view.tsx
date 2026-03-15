@@ -8,10 +8,13 @@ import {
   differenceInMinutes,
 } from "date-fns";
 import { cn } from "@/lib/utils";
+import { CheckCircle2, Circle } from "lucide-react";
 import type { CalendarEvent } from "@ai-todo/shared";
+import type { CalendarTask } from "@/lib/hooks/use-calendar-events";
 
 interface WeekViewProps {
   events: CalendarEvent[];
+  tasks: CalendarTask[];
   startDate: Date;
 }
 
@@ -20,12 +23,29 @@ const HOUR_END = 22;
 const HOUR_HEIGHT = 60; // px per hour
 const TOTAL_HOURS = HOUR_END - HOUR_START;
 
-export function WeekView({ events, startDate }: WeekViewProps) {
+function getTasksForDay(tasks: CalendarTask[], day: Date) {
+  return tasks.filter((t) => {
+    if (t.scheduled_date && isSameDay(parseISO(t.scheduled_date), day))
+      return true;
+    if (t.due_date && isSameDay(parseISO(t.due_date), day)) return true;
+    return false;
+  });
+}
+
+export function WeekView({ events, tasks, startDate }: WeekViewProps) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(startDate, i));
   const hours = Array.from({ length: TOTAL_HOURS }, (_, i) => HOUR_START + i);
 
   const allDayEvents = events.filter((e) => e.is_all_day);
   const timedEvents = events.filter((e) => !e.is_all_day);
+
+  // Tasks with scheduled_start/end go in the time grid; others go in all-day row
+  const timedTasks = tasks.filter((t) => t.scheduled_start && t.scheduled_end);
+  const allDayTasks = tasks.filter(
+    (t) => !t.scheduled_start || !t.scheduled_end
+  );
+
+  const hasAllDayRow = allDayEvents.length > 0 || allDayTasks.length > 0;
 
   function getEventStyle(event: CalendarEvent) {
     const start = parseISO(event.start_time);
@@ -39,16 +59,29 @@ export function WeekView({ events, startDate }: WeekViewProps) {
     };
   }
 
+  function getTaskStyle(task: CalendarTask) {
+    const start = parseISO(task.scheduled_start!);
+    const end = parseISO(task.scheduled_end!);
+    const startMinutes =
+      start.getHours() * 60 + start.getMinutes() - HOUR_START * 60;
+    const duration = differenceInMinutes(end, start);
+    return {
+      top: `${(startMinutes / 60) * HOUR_HEIGHT}px`,
+      height: `${Math.max((duration / 60) * HOUR_HEIGHT, 20)}px`,
+    };
+  }
+
   return (
     <div className="flex flex-col">
-      {/* All-day events row */}
-      {allDayEvents.length > 0 && (
+      {/* All-day row (events + date-only tasks) */}
+      {hasAllDayRow && (
         <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-border">
           <div className="p-1 text-xs text-muted-foreground">All day</div>
           {days.map((day) => {
             const dayEvents = allDayEvents.filter((e) =>
               isSameDay(parseISO(e.start_time), day)
             );
+            const dayTasks = getTasksForDay(allDayTasks, day);
             return (
               <div
                 key={day.toISOString()}
@@ -60,6 +93,22 @@ export function WeekView({ events, startDate }: WeekViewProps) {
                     className="mb-0.5 truncate rounded bg-accent/20 px-1.5 py-0.5 text-xs text-accent-foreground"
                   >
                     {e.title}
+                  </div>
+                ))}
+                {dayTasks.map((t) => (
+                  <div
+                    key={t.id}
+                    className={cn(
+                      "mb-0.5 flex items-center gap-1 truncate rounded bg-emerald-500/15 px-1.5 py-0.5 text-xs text-emerald-600 dark:text-emerald-400",
+                      t.is_completed && "line-through opacity-60"
+                    )}
+                  >
+                    {t.is_completed ? (
+                      <CheckCircle2 className="h-3 w-3 shrink-0" />
+                    ) : (
+                      <Circle className="h-3 w-3 shrink-0" />
+                    )}
+                    {t.title}
                   </div>
                 ))}
               </div>
@@ -76,7 +125,9 @@ export function WeekView({ events, startDate }: WeekViewProps) {
             key={day.toISOString()}
             className="border-l border-border px-2 py-2 text-center"
           >
-            <p className="text-xs text-muted-foreground">{format(day, "EEE")}</p>
+            <p className="text-xs text-muted-foreground">
+              {format(day, "EEE")}
+            </p>
             <p
               className={cn(
                 "text-lg font-semibold",
@@ -113,6 +164,10 @@ export function WeekView({ events, startDate }: WeekViewProps) {
           const dayEvents = timedEvents.filter((e) =>
             isSameDay(parseISO(e.start_time), day)
           );
+          const dayTimedTasks = timedTasks.filter(
+            (t) =>
+              t.scheduled_start && isSameDay(parseISO(t.scheduled_start), day)
+          );
           return (
             <div
               key={day.toISOString()}
@@ -141,6 +196,35 @@ export function WeekView({ events, startDate }: WeekViewProps) {
                   </p>
                   <p className="text-[10px] text-primary/80">
                     {format(parseISO(event.start_time), "h:mm a")}
+                  </p>
+                </div>
+              ))}
+
+              {/* Timed tasks */}
+              {dayTimedTasks.map((task) => (
+                <div
+                  key={task.id}
+                  className={cn(
+                    "absolute left-1 right-1 overflow-hidden rounded border-l-2 border-emerald-500 bg-emerald-500/15 px-1.5 py-0.5",
+                    task.is_completed && "opacity-60"
+                  )}
+                  style={getTaskStyle(task)}
+                >
+                  <p
+                    className={cn(
+                      "flex items-center gap-1 truncate text-xs font-medium text-emerald-600 dark:text-emerald-400",
+                      task.is_completed && "line-through"
+                    )}
+                  >
+                    {task.is_completed ? (
+                      <CheckCircle2 className="h-3 w-3 shrink-0" />
+                    ) : (
+                      <Circle className="h-3 w-3 shrink-0" />
+                    )}
+                    {task.title}
+                  </p>
+                  <p className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80">
+                    {format(parseISO(task.scheduled_start!), "h:mm a")}
                   </p>
                 </div>
               ))}
