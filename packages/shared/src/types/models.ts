@@ -1,4 +1,4 @@
-import type { Tables } from "./supabase";
+import type { Tables } from "./supabase.ts";
 
 /** Row type for the `items` table */
 export type Item = Tables<"items"> & {
