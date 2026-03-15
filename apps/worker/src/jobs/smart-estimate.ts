@@ -24,7 +24,7 @@ Use the estimate_task tool to save your estimate.`;
     userId,
     systemPrompt: SYSTEM_PROMPTS.SMART_ESTIMATOR,
     userMessage,
-    tools: INTELLIGENCE_TOOLS.filter((t) => t.name === "estimate_task"),
+    tools: INTELLIGENCE_TOOLS.filter((t) => t.function.name === "estimate_task"),
     maxTurns: 2,
   });
 

@@ -3,26 +3,29 @@ import { supabase } from "../lib/supabase";
 import { runAgent } from "../ai/agent";
 import { trackUsage } from "../ai/usage-tracker";
 import type { ReportInsightsJobData } from "@ai-todo/shared";
-import type { Tool } from "@anthropic-ai/sdk/resources/messages";
+import type { ChatCompletionTool } from "openai/resources/chat/completions";
 
-const INSIGHTS_TOOLS: Tool[] = [
+const INSIGHTS_TOOLS: ChatCompletionTool[] = [
   {
-    name: "save_insights",
-    description: "Save the generated productivity insights",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        insights: {
-          type: "string",
-          description: "Markdown-formatted productivity insights",
+    type: "function",
+    function: {
+      name: "save_insights",
+      description: "Save the generated productivity insights",
+      parameters: {
+        type: "object",
+        properties: {
+          insights: {
+            type: "string",
+            description: "Markdown-formatted productivity insights",
+          },
+          highlights: {
+            type: "array",
+            description: "Key highlights as short bullet points",
+            items: { type: "string" },
+          },
         },
-        highlights: {
-          type: "array",
-          description: "Key highlights as short bullet points",
-          items: { type: "string" },
-        },
+        required: ["insights"],
       },
-      required: ["insights"],
     },
   },
 ];

@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@ai-todo/shared": "workspace:*",
-    "@anthropic-ai/sdk": "^0.78.0",
+    "openai": "^4.73.0",
     "@slack/web-api": "^7.15.0",
     "@supabase/supabase-js": "^2.99.1",
     "bullmq": "^5.71.0",

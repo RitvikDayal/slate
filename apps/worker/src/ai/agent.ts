@@ -1,18 +1,18 @@
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { handleToolCall } from "./tool-handlers";
-import type { Tool } from "@anthropic-ai/sdk/resources/messages";
+import type { ChatCompletionTool } from "openai/resources/chat/completions";
 
-if (!process.env.ANTHROPIC_API_KEY) {
-  throw new Error("ANTHROPIC_API_KEY is required");
+if (!process.env.OPENAI_API_KEY) {
+  throw new Error("OPENAI_API_KEY is required");
 }
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export interface AgentRunOptions {
   userId: string;
   systemPrompt: string;
   userMessage: string;
-  tools: Tool[];
+  tools: ChatCompletionTool[];
   maxTurns?: number;
 }
 
@@ -26,7 +26,8 @@ export interface AgentRunResult {
 export async function runAgent(options: AgentRunOptions): Promise<AgentRunResult> {
   const { userId, systemPrompt, userMessage, tools, maxTurns = 10 } = options;
 
-  const messages: Anthropic.MessageParam[] = [
+  const messages: OpenAI.ChatCompletionMessageParam[] = [
+    { role: "system", content: systemPrompt },
     { role: "user", content: userMessage },
   ];
 
@@ -36,46 +37,45 @@ export async function runAgent(options: AgentRunOptions): Promise<AgentRunResult
   let finalText = "";
 
   for (let turn = 0; turn < maxTurns; turn++) {
-    const response = await client.messages.create({
-      model: "claude-sonnet-4-20250514",
+    const response = await client.chat.completions.create({
+      model: "gpt-4o-mini",
       max_tokens: 4096,
-      system: systemPrompt,
-      tools,
+      tools: tools.length > 0 ? tools : undefined,
       messages,
     });
 
-    totalInputTokens += response.usage.input_tokens;
-    totalOutputTokens += response.usage.output_tokens;
+    totalInputTokens += response.usage?.prompt_tokens ?? 0;
+    totalOutputTokens += response.usage?.completion_tokens ?? 0;
 
-    const textBlocks = response.content.filter(
-      (block): block is Anthropic.TextBlock => block.type === "text"
-    );
-    if (textBlocks.length > 0) {
-      finalText = textBlocks.map((b) => b.text).join("\n");
+    const choice = response.choices[0];
+    if (!choice) break;
+
+    const message = choice.message;
+
+    if (message.content) {
+      finalText = message.content;
     }
 
-    if (response.stop_reason === "end_turn") break;
+    if (choice.finish_reason === "stop" || !message.tool_calls?.length) break;
 
-    const toolUseBlocks = response.content.filter(
-      (block): block is Anthropic.ToolUseBlock => block.type === "tool_use"
-    );
+    // Append assistant message with tool calls
+    messages.push(message);
 
-    if (toolUseBlocks.length === 0) break;
-
-    messages.push({ role: "assistant", content: response.content });
-
-    const toolResults: Anthropic.ToolResultBlockParam[] = [];
-    for (const toolUse of toolUseBlocks) {
+    // Process tool calls
+    for (const toolCall of message.tool_calls) {
+      const args = JSON.parse(toolCall.function.arguments) as Record<string, unknown>;
       const result = await handleToolCall(
-        toolUse.name,
-        toolUse.input as Record<string, unknown>,
+        toolCall.function.name,
+        args,
         { userId }
       );
-      allToolCalls.push({ name: toolUse.name, input: toolUse.input as Record<string, unknown>, result });
-      toolResults.push({ type: "tool_result", tool_use_id: toolUse.id, content: result });
+      allToolCalls.push({ name: toolCall.function.name, input: args, result });
+      messages.push({
+        role: "tool",
+        tool_call_id: toolCall.id,
+        content: result,
+      });
     }
-
-    messages.push({ role: "user", content: toolResults });
   }
 
   return { finalText, toolCalls: allToolCalls, inputTokens: totalInputTokens, outputTokens: totalOutputTokens };

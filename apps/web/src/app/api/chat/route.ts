@@ -1,11 +1,11 @@
-import { createAnthropic } from "@ai-sdk/anthropic";
+import { createOpenAI } from "@ai-sdk/openai";
 import { streamText, tool, stepCountIs } from "ai";
 import { z } from "zod";
 import { getAuthenticatedUser } from "@/lib/api/auth";
 import { checkRateLimit } from "@/lib/api/rate-limit";
 
-const anthropic = createAnthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY!,
 });
 
 export const maxDuration = 60;
@@ -74,7 +74,7 @@ ${schedule ? `Version ${schedule.version}, status: ${schedule.status}, confirmed
 Tone: Friendly, concise, action-oriented. When the user makes a request, use tools immediately. Briefly explain what you did.`;
 
   const result = streamText({
-    model: anthropic("claude-sonnet-4-20250514"),
+    model: openai("gpt-4o-mini"),
     system: systemMessage,
     messages,
     tools: {
