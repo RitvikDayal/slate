@@ -26,7 +26,7 @@ import {
   Cell,
 } from "recharts";
 
-const PIE_COLORS = ["#34d399", "#fbbf24", "#f87171"];
+const PIE_COLORS = ["var(--chart-2)", "var(--chart-3)", "var(--chart-4)"];
 
 export function WeeklyReportView({ currentDate }: { currentDate: Date }) {
   const weekDate = format(currentDate, "yyyy-MM-dd");
@@ -53,7 +53,7 @@ export function WeeklyReportView({ currentDate }: { currentDate: Date }) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -61,8 +61,8 @@ export function WeeklyReportView({ currentDate }: { currentDate: Date }) {
   if (!report || report.dailyReports.length === 0) {
     return (
       <div className="py-8 text-center">
-        <p className="text-slate-400">No data for this week.</p>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="text-muted-foreground">No data for this week.</p>
+        <p className="mt-1 text-sm text-muted-foreground">
           Reports are generated automatically at end of day.
         </p>
       </div>
@@ -87,44 +87,44 @@ export function WeeklyReportView({ currentDate }: { currentDate: Date }) {
     <div className="space-y-6">
       {/* Summary stats */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Card className="border-slate-800 bg-slate-900">
+        <Card className="border-border bg-card">
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-green-400" />
-              <span className="text-xs text-slate-400">Completed</span>
+              <CheckCircle2 className="h-4 w-4 text-success" />
+              <span className="text-xs text-muted-foreground">Completed</span>
             </div>
-            <p className="mt-1 text-2xl font-bold text-green-400">
+            <p className="mt-1 text-2xl font-bold text-success">
               {report.totals.tasks_completed}
             </p>
           </CardContent>
         </Card>
-        <Card className="border-slate-800 bg-slate-900">
+        <Card className="border-border bg-card">
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-indigo-400" />
-              <span className="text-xs text-slate-400">Focus</span>
+              <Clock className="h-4 w-4 text-primary" />
+              <span className="text-xs text-muted-foreground">Focus</span>
             </div>
-            <p className="mt-1 text-2xl font-bold text-indigo-400">{focusHours}h</p>
+            <p className="mt-1 text-2xl font-bold text-primary">{focusHours}h</p>
           </CardContent>
         </Card>
-        <Card className="border-slate-800 bg-slate-900">
+        <Card className="border-border bg-card">
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-yellow-400" />
-              <span className="text-xs text-slate-400">Completion</span>
+              <TrendingUp className="h-4 w-4 text-warning" />
+              <span className="text-xs text-muted-foreground">Completion</span>
             </div>
-            <p className="mt-1 text-2xl font-bold text-yellow-400">
+            <p className="mt-1 text-2xl font-bold text-warning">
               {report.totals.completion_rate}%
             </p>
           </CardContent>
         </Card>
-        <Card className="border-slate-800 bg-slate-900">
+        <Card className="border-border bg-card">
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
-              <Zap className="h-4 w-4 text-purple-400" />
-              <span className="text-xs text-slate-400">Avg Focus/Day</span>
+              <Zap className="h-4 w-4 text-accent-foreground" />
+              <span className="text-xs text-muted-foreground">Avg Focus/Day</span>
             </div>
-            <p className="mt-1 text-2xl font-bold text-purple-400">
+            <p className="mt-1 text-2xl font-bold text-accent-foreground">
               {Math.round(report.totals.avg_focus_minutes_per_day)}m
             </p>
           </CardContent>
@@ -134,35 +134,35 @@ export function WeeklyReportView({ currentDate }: { currentDate: Date }) {
       {/* Charts row */}
       <div className="grid gap-4 md:grid-cols-2">
         {/* Daily bar chart */}
-        <Card className="border-slate-800 bg-slate-900 p-4">
+        <Card className="border-border bg-card p-4">
           <CardHeader className="px-0 pt-0">
-            <CardTitle className="text-sm text-slate-300">Daily Tasks</CardTitle>
+            <CardTitle className="text-sm text-secondary-foreground">Daily Tasks</CardTitle>
           </CardHeader>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={dailyChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis dataKey="label" stroke="#94a3b8" fontSize={12} />
-                <YAxis stroke="#94a3b8" fontSize={12} allowDecimals={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="label" stroke="var(--muted-foreground)" fontSize={12} />
+                <YAxis stroke="var(--muted-foreground)" fontSize={12} allowDecimals={false} />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "#1e293b",
-                    border: "1px solid #334155",
+                    backgroundColor: "var(--card)",
+                    border: "1px solid var(--border)",
                     borderRadius: "8px",
-                    color: "#e2e8f0",
+                    color: "var(--foreground)",
                     fontSize: "12px",
                   }}
                 />
-                <Bar dataKey="completed" fill="#818cf8" radius={[4, 4, 0, 0]} name="Completed" />
+                <Bar dataKey="completed" fill="var(--chart-1)" radius={[4, 4, 0, 0]} name="Completed" />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </Card>
 
         {/* Task distribution pie */}
-        <Card className="border-slate-800 bg-slate-900 p-4">
+        <Card className="border-border bg-card p-4">
           <CardHeader className="px-0 pt-0">
-            <CardTitle className="text-sm text-slate-300">Task Distribution</CardTitle>
+            <CardTitle className="text-sm text-secondary-foreground">Task Distribution</CardTitle>
           </CardHeader>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
@@ -182,10 +182,10 @@ export function WeeklyReportView({ currentDate }: { currentDate: Date }) {
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "#1e293b",
-                    border: "1px solid #334155",
+                    backgroundColor: "var(--card)",
+                    border: "1px solid var(--border)",
                     borderRadius: "8px",
-                    color: "#e2e8f0",
+                    color: "var(--foreground)",
                     fontSize: "12px",
                   }}
                 />
@@ -194,7 +194,7 @@ export function WeeklyReportView({ currentDate }: { currentDate: Date }) {
           </div>
           <div className="mt-2 flex justify-center gap-4">
             {pieData.map((entry, i) => (
-              <div key={entry.name} className="flex items-center gap-1.5 text-xs text-slate-400">
+              <div key={entry.name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span
                   className="inline-block h-2.5 w-2.5 rounded-full"
                   style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }}
@@ -207,19 +207,19 @@ export function WeeklyReportView({ currentDate }: { currentDate: Date }) {
       </div>
 
       {/* AI Insights */}
-      <Card className="border-slate-800 bg-slate-900 p-4">
+      <Card className="border-border bg-card p-4">
         <CardHeader className="px-0 pt-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-indigo-400" />
-              <CardTitle className="text-sm text-slate-300">AI Insights</CardTitle>
+              <Sparkles className="h-4 w-4 text-primary" />
+              <CardTitle className="text-sm text-secondary-foreground">AI Insights</CardTitle>
             </div>
             <Button
               variant="outline"
               size="xs"
               onClick={handleGenerateInsights}
               disabled={generatingInsights}
-              className="border-slate-700 text-slate-400"
+              className="border-border text-muted-foreground"
             >
               {generatingInsights ? (
                 <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
@@ -232,11 +232,11 @@ export function WeeklyReportView({ currentDate }: { currentDate: Date }) {
         </CardHeader>
         <CardContent className="px-0 pb-0">
           {report.aiInsights ? (
-            <div className="rounded-lg bg-slate-950 p-4 text-sm leading-relaxed text-slate-300">
+            <div className="rounded-lg bg-background p-4 text-sm leading-relaxed text-muted-foreground">
               {report.aiInsights}
             </div>
           ) : (
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               Click &ldquo;Generate&rdquo; to get AI-powered productivity insights for this week.
             </p>
           )}

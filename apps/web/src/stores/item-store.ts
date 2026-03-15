@@ -28,7 +28,7 @@ interface ItemStore {
 
 export const useItemStore = create<ItemStore>((set, get) => ({
   items: [],
-  isLoading: true,
+  isLoading: false,
   selectedItemId: null,
 
   fetchItemsByList: async (listId) => {

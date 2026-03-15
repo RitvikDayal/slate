@@ -11,7 +11,7 @@ export function SuggestionsPanel() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-4">
-        <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -19,10 +19,10 @@ export function SuggestionsPanel() {
   if (suggestions.length === 0) return null;
 
   return (
-    <div className="border-b border-slate-800 p-4">
+    <div className="border-b border-border p-4">
       <div className="mb-3 flex items-center gap-2">
-        <MessageSquare className="h-4 w-4 text-indigo-400" />
-        <h3 className="text-sm font-medium text-slate-300">
+        <MessageSquare className="h-4 w-4 text-primary" />
+        <h3 className="text-sm font-medium text-secondary-foreground">
           Slack Suggestions ({suggestions.length})
         </h3>
       </div>
@@ -36,7 +36,7 @@ export function SuggestionsPanel() {
           />
         ))}
         {suggestions.length > 5 && (
-          <p className="text-center text-xs text-slate-500">
+          <p className="text-center text-xs text-muted-foreground">
             +{suggestions.length - 5} more suggestions
           </p>
         )}

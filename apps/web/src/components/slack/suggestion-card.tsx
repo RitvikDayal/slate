@@ -8,9 +8,9 @@ import { Check, X, Hash, ChevronDown, ChevronUp } from "lucide-react";
 import type { SlackTaskSuggestion } from "@ai-todo/shared";
 
 const priorityColors: Record<string, string> = {
-  high: "bg-red-900/30 text-red-400",
-  medium: "bg-yellow-900/30 text-yellow-400",
-  low: "bg-green-900/30 text-green-400",
+  high: "bg-destructive/10 text-destructive",
+  medium: "bg-warning/10 text-warning",
+  low: "bg-success/10 text-success",
 };
 
 export function SuggestionCard({
@@ -45,14 +45,14 @@ export function SuggestionCard({
   };
 
   return (
-    <Card className="border-slate-800 bg-slate-900 p-4">
+    <Card className="border-border bg-card p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="font-medium text-white">
+          <p className="font-medium text-foreground">
             {suggestion.suggested_title}
           </p>
           <div className="mt-1 flex items-center gap-2">
-            <span className="flex items-center gap-1 text-xs text-slate-400">
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
               <Hash className="h-3 w-3" />
               {suggestion.channel_name}
             </span>
@@ -67,12 +67,12 @@ export function SuggestionCard({
             {suggestion.suggested_effort && (
               <Badge
                 variant="outline"
-                className="border-slate-700 text-slate-400"
+                className="border-border text-muted-foreground"
               >
                 {suggestion.suggested_effort}
               </Badge>
             )}
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-muted-foreground">
               {Math.round(suggestion.confidence * 100)}% confident
             </span>
           </div>
@@ -83,7 +83,7 @@ export function SuggestionCard({
             variant="ghost"
             onClick={handleAccept}
             disabled={accepting || dismissing}
-            className="text-green-400 hover:bg-green-900/30 hover:text-green-300"
+            className="text-success hover:bg-success/10 hover:text-success"
           >
             <Check className="h-4 w-4" />
           </Button>
@@ -92,7 +92,7 @@ export function SuggestionCard({
             variant="ghost"
             onClick={handleDismiss}
             disabled={accepting || dismissing}
-            className="text-red-400 hover:bg-red-900/30 hover:text-red-300"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
           >
             <X className="h-4 w-4" />
           </Button>
@@ -103,7 +103,7 @@ export function SuggestionCard({
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
-        className="mt-2 flex items-center gap-1 text-xs text-slate-500 hover:text-slate-300"
+        className="mt-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-secondary-foreground"
       >
         {expanded ? (
           <ChevronUp className="h-3 w-3" />
@@ -113,9 +113,9 @@ export function SuggestionCard({
         {expanded ? "Hide" : "Show"} original message
       </button>
       {expanded && (
-        <div className="mt-2 rounded bg-slate-950 p-3 text-sm text-slate-300">
+        <div className="mt-2 rounded bg-background p-3 text-sm text-muted-foreground">
           <p className="whitespace-pre-wrap">{suggestion.message_text}</p>
-          <p className="mt-2 text-xs italic text-slate-500">
+          <p className="mt-2 text-xs italic text-muted-foreground">
             {suggestion.reasoning}
           </p>
         </div>

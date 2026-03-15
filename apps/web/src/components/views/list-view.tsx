@@ -64,7 +64,9 @@ export function ListView({ listId }: ListViewProps) {
           <>
             <TaskList items={activeItems} listId={listId} />
 
-            <QuickAdd listId={listId} />
+            <div className="hidden md:block">
+              <QuickAdd listId={listId} />
+            </div>
 
             {completedItems.length > 0 && (
               <div className="mt-4 border-t border-border/50 pt-4">

@@ -15,21 +15,21 @@ export function ChatInput({ input, onChange, onSubmit, isLoading }: ChatInputPro
   return (
     <form
       onSubmit={onSubmit}
-      className="border-t border-slate-800 p-4"
+      className="border-t border-border p-4"
     >
       <div className="flex items-center gap-2">
         <Input
           value={input}
           onChange={onChange}
           placeholder="Ask anything about your tasks..."
-          className="flex-1 border-slate-700 bg-slate-900 text-sm"
+          className="flex-1 border-border bg-input text-sm"
           disabled={isLoading}
         />
         <Button
           type="submit"
           size="icon"
           disabled={!input.trim() || isLoading}
-          className="shrink-0 bg-indigo-600 hover:bg-indigo-500"
+          className="shrink-0 bg-primary hover:bg-primary/90"
         >
           <Send className="h-4 w-4" />
         </Button>

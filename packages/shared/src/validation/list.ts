@@ -17,5 +17,10 @@ export const updateListSchema = z.object({
   is_archived: z.boolean().optional(),
 });
 
+export const reorderListsSchema = z.object({
+  orderedIds: z.array(z.string().uuid()),
+});
+
 export type CreateListInput = z.infer<typeof createListSchema>;
 export type UpdateListInput = z.infer<typeof updateListSchema>;
+export type ReorderListsInput = z.infer<typeof reorderListsSchema>;

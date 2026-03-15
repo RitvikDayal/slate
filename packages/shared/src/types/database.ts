@@ -107,6 +107,71 @@ export interface DailyReport {
   created_at: string;
 }
 
+export type ItemType = "task" | "note" | "heading";
+export type ItemPriority = "none" | "low" | "medium" | "high";
+export type ItemEffort = "xs" | "s" | "m" | "l" | "xl";
+export type ItemSource = "manual" | "slack" | "ai_suggested";
+
+export interface List {
+  id: string;
+  user_id: string;
+  title: string;
+  icon: string | null;
+  color: string | null;
+  position: number;
+  parent_list_id: string | null;
+  is_inbox: boolean;
+  is_archived: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Item {
+  id: string;
+  list_id: string;
+  user_id: string;
+  parent_item_id: string | null;
+  type: ItemType;
+  title: string;
+  content_json: Record<string, unknown> | null;
+  is_completed: boolean;
+  completed_at: string | null;
+  due_date: string | null;
+  due_time: string | null;
+  reminder_at: string | null;
+  recurrence_rule: string | null;
+  priority: ItemPriority;
+  effort: ItemEffort | null;
+  estimated_minutes: number | null;
+  position: number;
+  is_movable: boolean;
+  source: ItemSource;
+  source_ref: Record<string, unknown> | null;
+  scheduled_date: string | null;
+  scheduled_start: string | null;
+  scheduled_end: string | null;
+  ai_notes: string | null;
+  is_archived: boolean;
+  created_at: string;
+  updated_at: string;
+  // Client-side computed
+  children?: Item[];
+  labels?: Label[];
+}
+
+export interface Label {
+  id: string;
+  user_id: string;
+  name: string;
+  color: string;
+  created_at: string;
+}
+
+export interface ItemLabel {
+  item_id: string;
+  label_id: string;
+}
+
 export type AttachmentType = "file" | "link";
 
 export interface Attachment {

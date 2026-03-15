@@ -60,7 +60,7 @@ export function TaskDetailDialog({ trigger, onSubmit }: TaskDetailDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger>{trigger}</DialogTrigger>
-      <DialogContent className="border-slate-800 bg-slate-900">
+      <DialogContent className="border-border bg-card">
         <DialogHeader>
           <DialogTitle>New Task</DialogTitle>
         </DialogHeader>
@@ -111,7 +111,7 @@ export function TaskDetailDialog({ trigger, onSubmit }: TaskDetailDialogProps) {
             <label htmlFor="movable" className="text-sm font-medium">AI can reschedule</label>
             <input type="checkbox" id="movable" checked={isMovable} onChange={(e) => setIsMovable(e.target.checked)} className="h-4 w-4" />
           </div>
-          <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500"
+          <Button type="submit" className="w-full bg-primary hover:bg-primary/90"
             disabled={!title.trim() || isSubmitting}>
             Create Task
           </Button>

@@ -1,20 +1,19 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Plus, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Plus } from "lucide-react";
 import type { CreateTaskInput } from "@ai-todo/shared";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface QuickAddFabProps {
   onAdd: (input: CreateTaskInput) => Promise<unknown>;
 }
 
 export function QuickAddFab({ onAdd }: QuickAddFabProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,58 +29,52 @@ export function QuickAddFab({ onAdd }: QuickAddFabProps) {
         scheduled_date: format(new Date(), "yyyy-MM-dd"),
       });
       setTitle("");
-      setIsOpen(false);
+      inputRef.current?.focus();
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (!isOpen) {
-    return (
-      <Button
-        onClick={() => {
-          setIsOpen(true);
-          setTimeout(() => inputRef.current?.focus(), 100);
-        }}
-        className="fixed bottom-24 right-4 h-14 w-14 rounded-full bg-indigo-600 shadow-lg hover:bg-indigo-500 md:bottom-8"
-        size="icon"
-      >
-        <Plus className="h-6 w-6" />
-      </Button>
-    );
-  }
+  const hasText = title.trim().length > 0;
 
   return (
-    <div className="fixed bottom-24 left-4 right-4 md:bottom-8 md:left-auto md:right-4 md:w-96">
+    <div className="fixed bottom-[60px] left-0 right-0 z-40 border-t border-border/40 bg-background/95 px-4 py-3 backdrop-blur-xl md:bottom-0 md:border-0 md:bg-transparent md:px-0 md:py-0">
       <form
         onSubmit={handleSubmit}
-        className="flex items-center gap-2 rounded-2xl border border-slate-700 bg-slate-900 p-3 shadow-xl"
+        className={cn(
+          "flex items-center gap-2 rounded-2xl border bg-card px-4 py-0.5 transition-all duration-150",
+          isFocused
+            ? "border-primary/40 shadow-[0_0_0_3px_oklch(0.82_0.17_82_/_0.08)]"
+            : "border-border"
+        )}
       >
-        <Input
+        <Plus
+          className={cn(
+            "h-4 w-4 shrink-0 transition-colors",
+            isFocused ? "text-primary/70" : "text-muted-foreground/40"
+          )}
+        />
+        <input
           ref={inputRef}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="What do you need to do?"
-          className="border-0 bg-transparent text-sm focus-visible:ring-0"
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          placeholder="Add a task…"
+          className="flex-1 bg-transparent py-3.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none"
           disabled={isSubmitting}
+          autoComplete="off"
+          autoCorrect="off"
         />
-        <Button
-          type="submit"
-          size="sm"
-          disabled={!title.trim() || isSubmitting}
-          className="bg-indigo-600 hover:bg-indigo-500"
-        >
-          Add
-        </Button>
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          onClick={() => setIsOpen(false)}
-          className="shrink-0"
-        >
-          <X className="h-4 w-4" />
-        </Button>
+        {hasText && (
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="shrink-0 rounded-xl bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground transition-all active:scale-95 disabled:opacity-50"
+          >
+            Add
+          </button>
+        )}
       </form>
     </div>
   );

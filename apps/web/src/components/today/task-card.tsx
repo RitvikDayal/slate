@@ -1,19 +1,13 @@
 "use client";
 
 import type { Task } from "@ai-todo/shared";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import { CheckCircle2, Circle, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const priorityColors = {
-  high: "bg-red-500/10 text-red-400 border-red-500/20",
-  medium: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
-  low: "bg-green-500/10 text-green-400 border-green-500/20",
-};
-
-const effortLabels: Record<string, string> = {
-  xs: "XS", s: "S", m: "M", l: "L", xl: "XL",
+const priorityStripe: Record<string, string> = {
+  high: "bg-[oklch(0.65_0.22_27)]",
+  medium: "bg-primary",
+  low: "bg-[oklch(0.72_0.16_145)]",
 };
 
 interface TaskCardProps {
@@ -25,47 +19,53 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
   const isDone = task.status === "done";
 
   return (
-    <Card
+    <div
       className={cn(
-        "flex items-center gap-3 border-slate-800 bg-slate-900 p-3 transition-all",
-        isDone && "opacity-50"
+        "group flex items-center gap-2 rounded-xl px-3 py-1 transition-colors hover:bg-card",
+        isDone && "opacity-40"
       )}
     >
+      {/* Priority stripe */}
+      <div
+        className={cn(
+          "h-8 w-[3px] shrink-0 rounded-full",
+          priorityStripe[task.priority]
+        )}
+      />
+
+      {/* Completion toggle — 44px touch target */}
       <button
         onClick={() => !isDone && onComplete(task.id)}
-        className="shrink-0"
+        className="-mx-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors"
+        aria-label={isDone ? "Completed" : "Mark complete"}
       >
         {isDone ? (
-          <CheckCircle2 className="h-5 w-5 text-green-400" />
+          <CheckCircle2 className="h-[18px] w-[18px] text-primary" />
         ) : (
-          <Circle className="h-5 w-5 text-slate-600 hover:text-indigo-400" />
+          <Circle className="h-[18px] w-[18px] text-muted-foreground/40 transition-colors group-hover:text-muted-foreground/70" />
         )}
       </button>
 
-      <div className="min-w-0 flex-1">
-        <p className={cn("text-sm font-medium", isDone && "line-through text-slate-500")}>
+      {/* Content */}
+      <div className="min-w-0 flex-1 py-3">
+        <p
+          className={cn(
+            "text-sm font-medium leading-snug",
+            isDone && "text-muted-foreground line-through"
+          )}
+        >
           {task.title}
         </p>
-        <div className="mt-1 flex items-center gap-2">
-          <Badge variant="outline" className={priorityColors[task.priority]}>
-            {task.priority.toUpperCase()}
-          </Badge>
-          {task.effort && (
-            <Badge variant="outline" className="border-slate-700 text-slate-400">
-              {effortLabels[task.effort]}
-            </Badge>
-          )}
-          {task.estimated_minutes && (
-            <span className="text-xs text-slate-500">
-              {task.estimated_minutes}m
-            </span>
-          )}
-        </div>
+        {task.estimated_minutes && !isDone && (
+          <p className="mt-0.5 text-xs text-muted-foreground/60">
+            {task.estimated_minutes}m
+          </p>
+        )}
       </div>
 
       {!task.is_movable && (
-        <Lock className="h-4 w-4 shrink-0 text-slate-600" />
+        <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground/30" />
       )}
-    </Card>
+    </div>
   );
 }

@@ -22,7 +22,7 @@ export function QuickActions({ onAction }: QuickActionsProps) {
           variant="outline"
           size="sm"
           onClick={() => onAction(action.message)}
-          className="shrink-0 border-slate-700 text-xs text-slate-300 hover:bg-slate-800"
+          className="shrink-0 border-border text-xs text-muted-foreground hover:bg-muted"
         >
           {action.label}
         </Button>

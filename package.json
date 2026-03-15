@@ -7,7 +7,7 @@
     "build": "turbo build",
     "lint": "turbo lint",
     "test": "turbo test",
-    "db:migrate": "supabase db push",
+    "db:migrate": "supabase db push --local",
     "db:reset": "supabase db reset",
     "db:start": "supabase start"
   },

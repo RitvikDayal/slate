@@ -39,4 +39,4 @@ CREATE POLICY "Users can update own suggestions"
 -- Updated_at trigger
 CREATE TRIGGER update_slack_suggestions_updated_at
   BEFORE UPDATE ON slack_task_suggestions
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();

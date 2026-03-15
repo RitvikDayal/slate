@@ -55,13 +55,13 @@ export function CalendarView() {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={goPrev}
-            className="border-slate-700"
+            className="border-border"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -69,7 +69,7 @@ export function CalendarView() {
             variant="outline"
             size="sm"
             onClick={goToday}
-            className="border-slate-700 text-xs"
+            className="border-border text-xs"
           >
             Today
           </Button>
@@ -77,7 +77,7 @@ export function CalendarView() {
             variant="outline"
             size="sm"
             onClick={goNext}
-            className="border-slate-700"
+            className="border-border"
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
@@ -87,13 +87,13 @@ export function CalendarView() {
               : format(currentDate, "MMMM yyyy")}
           </h1>
         </div>
-        <div className="flex gap-1 rounded-lg border border-slate-700 p-0.5">
+        <div className="flex gap-1 rounded-lg border border-border p-0.5">
           <Button
             variant={viewMode === "week" ? "default" : "ghost"}
             size="sm"
             onClick={() => setViewMode("week")}
             className={
-              viewMode === "week" ? "bg-indigo-600" : "text-slate-400"
+              viewMode === "week" ? "bg-primary" : "text-muted-foreground"
             }
           >
             Week
@@ -103,7 +103,7 @@ export function CalendarView() {
             size="sm"
             onClick={() => setViewMode("month")}
             className={
-              viewMode === "month" ? "bg-indigo-600" : "text-slate-400"
+              viewMode === "month" ? "bg-primary" : "text-muted-foreground"
             }
           >
             Month

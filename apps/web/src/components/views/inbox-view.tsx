@@ -65,7 +65,9 @@ export function InboxView() {
           <>
             <TaskList items={activeItems} listId={inbox?.id} />
 
-            {inbox?.id && <QuickAdd listId={inbox.id} />}
+            <div className="hidden md:block">
+              {inbox?.id && <QuickAdd listId={inbox.id} />}
+            </div>
 
             {completedItems.length > 0 && (
               <div className="mt-4 border-t border-border/50 pt-4">

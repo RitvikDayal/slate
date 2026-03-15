@@ -48,6 +48,12 @@ export function playComplete() {
   setTimeout(() => playTone(990, 0.15, 0.1, "sine"), 50);
 }
 
+/** Reverse completion — soft descending tone */
+export function playUncomplete() {
+  playTone(990, 0.08, 0.1, "sine");
+  setTimeout(() => playTone(660, 0.12, 0.08, "sine"), 50);
+}
+
 /** Soft delete/dismiss sound */
 export function playDelete() {
   playTone(440, 0.1, 0.08, "triangle");

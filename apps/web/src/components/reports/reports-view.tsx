@@ -34,9 +34,9 @@ export function ReportsView() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Reports</h1>
-          <p className="mt-1 text-sm text-slate-400">Track your productivity and trends.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Track your productivity and trends.</p>
         </div>
-        <div className="flex gap-1 rounded-lg bg-slate-900 p-1">
+        <div className="flex gap-1 rounded-lg bg-card p-1">
           <Button
             variant={viewMode === "daily" ? "secondary" : "ghost"}
             size="sm"
@@ -61,7 +61,7 @@ export function ReportsView() {
         <Button variant="ghost" size="icon-sm" onClick={navigateBack}>
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <span className="text-sm font-medium text-slate-300">{dateLabel}</span>
+        <span className="text-sm font-medium text-secondary-foreground">{dateLabel}</span>
         <Button variant="ghost" size="icon-sm" onClick={navigateForward}>
           <ChevronRight className="h-4 w-4" />
         </Button>

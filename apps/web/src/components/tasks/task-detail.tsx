@@ -76,12 +76,18 @@ export function TaskDetail({ item }: TaskDetailProps) {
         <DatePicker
           value={item.due_date}
           onChange={(date) => updateItem(item.id, { due_date: date })}
+          showTime
+          timeValue={item.due_time}
+          onTimeChange={(time) => updateItem(item.id, { due_time: time })}
           trigger={
             <span className="inline-flex items-center gap-1.5">
               <Calendar className="h-3.5 w-3.5" />
               {item.due_date
                 ? format(new Date(item.due_date), "MMM d")
                 : "Set date"}
+              {item.due_time && (
+                <span className="text-muted-foreground">{item.due_time}</span>
+              )}
             </span>
           }
         />

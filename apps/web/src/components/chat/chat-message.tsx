@@ -25,7 +25,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
   return (
     <div className={cn("flex gap-3", isAssistant ? "items-start" : "items-start justify-end")}>
       {isAssistant && (
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary">
           <Bot className="h-4 w-4" />
         </div>
       )}
@@ -34,8 +34,8 @@ export function ChatMessage({ message }: ChatMessageProps) {
         className={cn(
           "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm",
           isAssistant
-            ? "bg-slate-800 text-slate-100"
-            : "bg-indigo-600 text-white"
+            ? "bg-muted text-foreground"
+            : "bg-primary text-primary-foreground"
         )}
       >
         {textContent && (
@@ -44,7 +44,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
         {/* Show tool invocations */}
         {toolParts.length > 0 && (
-          <div className="mt-2 space-y-1 border-t border-slate-700 pt-2">
+          <div className="mt-2 space-y-1 border-t border-border pt-2">
             {toolParts.map((part, i) => {
               const toolName =
                 part.type === "dynamic-tool"
@@ -52,7 +52,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
                   : part.type.replace("tool-", "");
               const state = (part as { state?: string }).state ?? "unknown";
               return (
-                <div key={i} className="text-xs text-slate-400">
+                <div key={i} className="text-xs text-muted-foreground">
                   {state === "output-available" ? (
                     <span>Used {toolName} — done</span>
                   ) : state === "output-error" ? (
@@ -68,7 +68,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
       </div>
 
       {!isAssistant && (
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-700">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
           <User className="h-4 w-4" />
         </div>
       )}

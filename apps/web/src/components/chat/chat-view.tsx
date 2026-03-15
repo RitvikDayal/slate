@@ -45,9 +45,9 @@ export function ChatView() {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="border-b border-slate-800 px-4 py-3">
+      <div className="border-b border-border px-4 py-3">
         <h1 className="text-lg font-semibold">AI Assistant</h1>
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-muted-foreground">
           Ask me to manage tasks, adjust your schedule, or plan your day
         </p>
       </div>
@@ -59,8 +59,8 @@ export function ChatView() {
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <p className="text-lg text-slate-400">Hello! How can I help you today?</p>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="text-lg text-muted-foreground">Hello! How can I help you today?</p>
+            <p className="mt-1 text-sm text-muted-foreground">
               Try &quot;What&apos;s on my schedule?&quot; or &quot;Add a task to review PRs&quot;
             </p>
           </div>
@@ -72,14 +72,14 @@ export function ChatView() {
           ))}
 
           {isLoading && (
-            <div className="flex items-center gap-2 text-sm text-slate-400">
-              <div className="h-2 w-2 animate-pulse rounded-full bg-indigo-400" />
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="h-2 w-2 animate-pulse rounded-full bg-primary" />
               Thinking...
             </div>
           )}
 
           {error && (
-            <div className="rounded-lg border border-red-800 bg-red-950 p-3 text-sm text-red-400">
+            <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               Something went wrong. Please try again.
             </div>
           )}

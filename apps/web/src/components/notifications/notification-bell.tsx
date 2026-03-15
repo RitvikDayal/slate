@@ -89,18 +89,18 @@ export function NotificationBell() {
         variant="ghost"
         size="icon"
         onClick={() => setIsOpen(!isOpen)}
-        className="relative text-slate-400 hover:text-white"
+        className="relative text-muted-foreground hover:text-foreground"
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
       </Button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-lg border border-slate-700 bg-slate-900 shadow-xl">
+        <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-lg border border-border bg-card shadow-xl">
           <NotificationList
             notifications={notifications}
             onMarkAsRead={markAsRead}

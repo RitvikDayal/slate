@@ -14,7 +14,8 @@ export function useCalendarEvents(startDate: string, endDate: string) {
         `/api/calendar/events?start=${startDate}&end=${endDate}`
       );
       if (res.ok) {
-        setEvents(await res.json());
+        const data = await res.json();
+        setEvents(data.events ?? []);
       }
     } finally {
       setIsLoading(false);

@@ -4,8 +4,8 @@
   "description": "AI-powered daily planner and task manager",
   "start_url": "/today",
   "display": "standalone",
-  "theme_color": "#6366f1",
-  "background_color": "#0f172a",
+  "theme_color": "#7c3aed",
+  "background_color": "#1e1e35",
   "orientation": "portrait-primary",
   "icons": [
     {

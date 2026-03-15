@@ -44,7 +44,7 @@ export function DailyReportView({ currentDate }: { currentDate: Date }) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -53,31 +53,31 @@ export function DailyReportView({ currentDate }: { currentDate: Date }) {
     <div className="space-y-6">
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-3">
-        <Card className="border-slate-800 bg-slate-900">
+        <Card className="border-border bg-card">
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-green-400" />
-              <span className="text-xs text-slate-400">Completed</span>
+              <CheckCircle2 className="h-4 w-4 text-success" />
+              <span className="text-xs text-muted-foreground">Completed</span>
             </div>
-            <p className="mt-1 text-2xl font-bold text-green-400">{totals.completed}</p>
+            <p className="mt-1 text-2xl font-bold text-success">{totals.completed}</p>
           </CardContent>
         </Card>
-        <Card className="border-slate-800 bg-slate-900">
+        <Card className="border-border bg-card">
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-indigo-400" />
-              <span className="text-xs text-slate-400">Focus Hours</span>
+              <Clock className="h-4 w-4 text-primary" />
+              <span className="text-xs text-muted-foreground">Focus Hours</span>
             </div>
-            <p className="mt-1 text-2xl font-bold text-indigo-400">{totals.focusHours}h</p>
+            <p className="mt-1 text-2xl font-bold text-primary">{totals.focusHours}h</p>
           </CardContent>
         </Card>
-        <Card className="border-slate-800 bg-slate-900">
+        <Card className="border-border bg-card">
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-yellow-400" />
-              <span className="text-xs text-slate-400">Completion</span>
+              <TrendingUp className="h-4 w-4 text-warning" />
+              <span className="text-xs text-muted-foreground">Completion</span>
             </div>
-            <p className="mt-1 text-2xl font-bold text-yellow-400">
+            <p className="mt-1 text-2xl font-bold text-warning">
               {totals.completed + totals.pending > 0
                 ? Math.round((totals.completed / (totals.completed + totals.pending)) * 100)
                 : 0}%
@@ -87,52 +87,52 @@ export function DailyReportView({ currentDate }: { currentDate: Date }) {
       </div>
 
       {/* Bar chart */}
-      <Card className="border-slate-800 bg-slate-900 p-4">
+      <Card className="border-border bg-card p-4">
         <CardHeader className="px-0 pt-0">
-          <CardTitle className="text-sm text-slate-300">Tasks Completed (7 days)</CardTitle>
+          <CardTitle className="text-sm text-secondary-foreground">Tasks Completed (7 days)</CardTitle>
         </CardHeader>
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-              <XAxis dataKey="label" stroke="#94a3b8" fontSize={12} />
-              <YAxis stroke="#94a3b8" fontSize={12} allowDecimals={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="label" stroke="var(--muted-foreground)" fontSize={12} />
+              <YAxis stroke="var(--muted-foreground)" fontSize={12} allowDecimals={false} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#1e293b",
-                  border: "1px solid #334155",
+                  backgroundColor: "var(--card)",
+                  border: "1px solid var(--border)",
                   borderRadius: "8px",
-                  color: "#e2e8f0",
+                  color: "var(--foreground)",
                   fontSize: "12px",
                 }}
               />
-              <Bar dataKey="completed" fill="#818cf8" radius={[4, 4, 0, 0]} name="Tasks" />
+              <Bar dataKey="completed" fill="var(--chart-1)" radius={[4, 4, 0, 0]} name="Tasks" />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </Card>
 
       {/* Focus time chart */}
-      <Card className="border-slate-800 bg-slate-900 p-4">
+      <Card className="border-border bg-card p-4">
         <CardHeader className="px-0 pt-0">
-          <CardTitle className="text-sm text-slate-300">Focus Hours (7 days)</CardTitle>
+          <CardTitle className="text-sm text-secondary-foreground">Focus Hours (7 days)</CardTitle>
         </CardHeader>
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-              <XAxis dataKey="label" stroke="#94a3b8" fontSize={12} />
-              <YAxis stroke="#94a3b8" fontSize={12} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="label" stroke="var(--muted-foreground)" fontSize={12} />
+              <YAxis stroke="var(--muted-foreground)" fontSize={12} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#1e293b",
-                  border: "1px solid #334155",
+                  backgroundColor: "var(--card)",
+                  border: "1px solid var(--border)",
                   borderRadius: "8px",
-                  color: "#e2e8f0",
+                  color: "var(--foreground)",
                   fontSize: "12px",
                 }}
               />
-              <Bar dataKey="focus" fill="#34d399" radius={[4, 4, 0, 0]} name="Hours" />
+              <Bar dataKey="focus" fill="var(--chart-2)" radius={[4, 4, 0, 0]} name="Hours" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -141,21 +141,21 @@ export function DailyReportView({ currentDate }: { currentDate: Date }) {
       {/* Individual day summaries */}
       {reports.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-medium text-slate-300">Daily Breakdown</h3>
+          <h3 className="text-sm font-medium text-foreground">Daily Breakdown</h3>
           {reports.map((report) => (
-            <Card key={report.id} className="border-slate-800 bg-slate-900 p-3">
+            <Card key={report.id} className="border-border bg-card p-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">
                   {format(new Date(report.date + "T00:00:00"), "EEEE, MMM d")}
                 </span>
-                <div className="flex items-center gap-4 text-xs text-slate-400">
-                  <span className="text-green-400">{report.tasks_completed} done</span>
-                  <span className="text-yellow-400">{report.tasks_pending} pending</span>
-                  <span className="text-indigo-400">{report.total_focus_minutes}m focus</span>
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  <span className="text-success">{report.tasks_completed} done</span>
+                  <span className="text-warning">{report.tasks_pending} pending</span>
+                  <span className="text-primary">{report.total_focus_minutes}m focus</span>
                 </div>
               </div>
               {report.ai_summary && (
-                <p className="mt-2 text-xs text-slate-400">{report.ai_summary}</p>
+                <p className="mt-2 text-xs text-muted-foreground">{report.ai_summary}</p>
               )}
             </Card>
           ))}
@@ -164,8 +164,8 @@ export function DailyReportView({ currentDate }: { currentDate: Date }) {
 
       {reports.length === 0 && (
         <div className="py-8 text-center">
-          <p className="text-slate-400">No reports for this period.</p>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="text-muted-foreground">No reports for this period.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
             Reports are generated automatically at end of day.
           </p>
         </div>

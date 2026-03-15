@@ -72,7 +72,7 @@ export function AppShell({
         <Sidebar user={user} />
       </motion.aside>
       <div className="flex min-h-0 flex-1 flex-col">
-        <main className="flex-1 overflow-y-auto pb-48 md:pb-0">
+        <main className="flex-1 overflow-y-auto pb-[calc(128px+env(safe-area-inset-bottom,0px))] md:pb-0">
           {children}
         </main>
       </div>

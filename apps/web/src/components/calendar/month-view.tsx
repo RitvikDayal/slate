@@ -43,11 +43,11 @@ export function MonthView({ events, currentDate, onDayClick }: MonthViewProps) {
   return (
     <div className="flex h-full flex-col">
       {/* Day headers */}
-      <div className="grid grid-cols-7 border-b border-slate-800">
+      <div className="grid grid-cols-7 border-b border-border">
         {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
           <div
             key={d}
-            className="px-2 py-1.5 text-center text-xs text-slate-400"
+            className="px-2 py-1.5 text-center text-xs text-muted-foreground"
           >
             {d}
           </div>
@@ -59,7 +59,7 @@ export function MonthView({ events, currentDate, onDayClick }: MonthViewProps) {
         {weeks.map((week, wi) => (
           <div
             key={wi}
-            className="grid flex-1 grid-cols-7 border-b border-slate-800"
+            className="grid flex-1 grid-cols-7 border-b border-border"
           >
             {week.map((d) => {
               const dayEvents = events.filter((e) =>
@@ -72,7 +72,7 @@ export function MonthView({ events, currentDate, onDayClick }: MonthViewProps) {
                 <div
                   key={d.toISOString()}
                   className={cn(
-                    "cursor-pointer border-l border-slate-800 p-1 hover:bg-slate-800/50",
+                    "cursor-pointer border-l border-border p-1 hover:bg-muted/50",
                     !isSameMonth(d, currentDate) && "opacity-40"
                   )}
                   onClick={() => onDayClick(d)}
@@ -81,7 +81,7 @@ export function MonthView({ events, currentDate, onDayClick }: MonthViewProps) {
                     className={cn(
                       "mb-0.5 text-xs",
                       isToday(d) &&
-                        "flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 font-bold text-white"
+                        "flex h-5 w-5 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground"
                     )}
                   >
                     {format(d, "d")}
@@ -89,13 +89,13 @@ export function MonthView({ events, currentDate, onDayClick }: MonthViewProps) {
                   {visible.map((e) => (
                     <div
                       key={e.id}
-                      className="mb-0.5 truncate rounded bg-blue-500/20 px-1 py-0.5 text-[10px] text-blue-300"
+                      className="mb-0.5 truncate rounded bg-accent/20 px-1 py-0.5 text-[10px] text-accent-foreground"
                     >
                       {e.title}
                     </div>
                   ))}
                   {overflow > 0 && (
-                    <p className="text-[10px] text-slate-500">
+                    <p className="text-[10px] text-muted-foreground">
                       +{overflow} more
                     </p>
                   )}

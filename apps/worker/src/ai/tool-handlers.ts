@@ -11,10 +11,18 @@ export async function handleToolCall(
   ctx: ToolContext
 ): Promise<string> {
   switch (toolName) {
-    case "create_task": return handleCreateTask(toolInput, ctx);
-    case "update_task": return handleUpdateTask(toolInput, ctx);
-    case "complete_task": return handleCompleteTask(toolInput, ctx);
-    case "get_tasks": return handleGetTasks(toolInput, ctx);
+    // New item-based handlers
+    case "create_item": return handleCreateItem(toolInput, ctx);
+    case "update_item": return handleUpdateItem(toolInput, ctx);
+    case "complete_item": return handleCompleteItem(toolInput, ctx);
+    case "list_items": return handleListItems(toolInput, ctx);
+    case "get_lists": return handleGetLists(ctx);
+    // Deprecated aliases (map old task-based calls to new item handlers)
+    case "create_task": return handleCreateItem(toolInput, ctx);
+    case "update_task": return handleUpdateItem({ item_id: toolInput.task_id, ...toolInput }, ctx);
+    case "complete_task": return handleCompleteItem({ item_id: toolInput.task_id, ...toolInput }, ctx);
+    case "get_tasks": return handleListItems({ scheduled_date: toolInput.date, ...toolInput }, ctx);
+    // Existing handlers
     case "get_calendar_events": return handleGetCalendarEvents(toolInput, ctx);
     case "generate_schedule": return handleGenerateSchedule(toolInput, ctx);
     case "shuffle_schedule": return handleShuffleSchedule(toolInput, ctx);
@@ -25,83 +33,140 @@ export async function handleToolCall(
   }
 }
 
-async function handleCreateTask(input: Record<string, unknown>, ctx: ToolContext): Promise<string> {
+async function handleCreateItem(input: Record<string, unknown>, ctx: ToolContext): Promise<string> {
+  // If no list_id provided, default to the user's inbox
+  let listId = input.list_id as string | undefined;
+  if (!listId) {
+    const { data: inbox } = await supabase
+      .from("lists")
+      .select("id")
+      .eq("user_id", ctx.userId)
+      .eq("is_inbox", true)
+      .single();
+    if (inbox) listId = inbox.id;
+  }
+
   const { data, error } = await supabase
-    .from("tasks")
+    .from("items")
     .insert({
       user_id: ctx.userId,
+      list_id: listId ?? null,
       title: input.title as string,
-      description: (input.description as string) || null,
+      type: (input.type as string) || "task",
       priority: (input.priority as string) || "medium",
       effort: (input.effort as string) || null,
       estimated_minutes: (input.estimated_minutes as number) || null,
+      due_date: (input.due_date as string) || null,
+      due_time: (input.due_time as string) || null,
       scheduled_date: (input.scheduled_date as string) || null,
       scheduled_start: (input.scheduled_start as string) || null,
       scheduled_end: (input.scheduled_end as string) || null,
       is_movable: input.is_movable !== false,
-      source: "ai_suggested",
+      ai_notes: (input.ai_notes as string) || (input.description as string) || null,
+      source: (input.source as string) || "ai_suggested",
     })
     .select()
     .single();
 
   if (error) return JSON.stringify({ error: error.message });
-  return JSON.stringify({ success: true, task: data });
+  return JSON.stringify({ success: true, item: data });
 }
 
-async function handleUpdateTask(input: Record<string, unknown>, ctx: ToolContext): Promise<string> {
-  const { task_id, ...updates } = input;
+async function handleUpdateItem(input: Record<string, unknown>, ctx: ToolContext): Promise<string> {
+  const { item_id, task_id: _taskId, ...updates } = input;
   const updateData: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(updates)) {
     if (value !== undefined) updateData[key] = value;
   }
-  if (updateData.status === "done") {
+  // Set completed_at when marking as completed
+  if (updateData.is_completed === true) {
     updateData.completed_at = new Date().toISOString();
+  }
+  // Handle legacy status field
+  if (updateData.status === "done") {
+    updateData.is_completed = true;
+    updateData.completed_at = new Date().toISOString();
+    delete updateData.status;
   }
 
   const { data, error } = await supabase
-    .from("tasks")
+    .from("items")
     .update(updateData)
-    .eq("id", task_id as string)
+    .eq("id", item_id as string)
     .eq("user_id", ctx.userId)
     .select()
     .single();
 
   if (error) return JSON.stringify({ error: error.message });
-  return JSON.stringify({ success: true, task: data });
+  return JSON.stringify({ success: true, item: data });
 }
 
-async function handleCompleteTask(input: Record<string, unknown>, ctx: ToolContext): Promise<string> {
+async function handleCompleteItem(input: Record<string, unknown>, ctx: ToolContext): Promise<string> {
   const { data, error } = await supabase
-    .from("tasks")
+    .from("items")
     .update({
-      status: "done",
+      is_completed: true,
       completed_at: new Date().toISOString(),
       ai_notes: (input.completion_notes as string) || null,
     })
-    .eq("id", input.task_id as string)
+    .eq("id", (input.item_id ?? input.task_id) as string)
     .eq("user_id", ctx.userId)
     .select()
     .single();
 
   if (error) return JSON.stringify({ error: error.message });
-  return JSON.stringify({ success: true, task: data });
+  return JSON.stringify({ success: true, item: data });
 }
 
-async function handleGetTasks(input: Record<string, unknown>, ctx: ToolContext): Promise<string> {
+async function handleListItems(input: Record<string, unknown>, ctx: ToolContext): Promise<string> {
   let query = supabase
-    .from("tasks")
+    .from("items")
     .select("*")
     .eq("user_id", ctx.userId)
-    .eq("scheduled_date", input.date as string)
     .order("scheduled_start", { ascending: true, nullsFirst: false });
 
-  if (input.status) {
-    query = query.eq("status", input.status as string);
+  if (input.list_id) {
+    query = query.eq("list_id", input.list_id as string);
+  }
+  if (input.scheduled_date) {
+    query = query.eq("scheduled_date", input.scheduled_date as string);
+  }
+  if (input.due_date) {
+    query = query.eq("due_date", input.due_date as string);
+  }
+  // By default exclude completed items unless explicitly requested
+  if (!input.include_completed) {
+    query = query.eq("is_completed", false);
   }
 
   const { data, error } = await query;
   if (error) return JSON.stringify({ error: error.message });
-  return JSON.stringify({ tasks: data });
+  return JSON.stringify({ items: data });
+}
+
+async function handleGetLists(ctx: ToolContext): Promise<string> {
+  const { data: lists, error } = await supabase
+    .from("lists")
+    .select("id, title, icon, is_inbox, is_archived, position")
+    .eq("user_id", ctx.userId)
+    .eq("is_archived", false)
+    .order("position", { ascending: true });
+
+  if (error) return JSON.stringify({ error: error.message });
+
+  // Get item counts per list
+  const listsWithCounts = await Promise.all(
+    (lists ?? []).map(async (list) => {
+      const { count } = await supabase
+        .from("items")
+        .select("*", { count: "exact", head: true })
+        .eq("list_id", list.id)
+        .eq("is_completed", false);
+      return { ...list, item_count: count ?? 0 };
+    })
+  );
+
+  return JSON.stringify({ lists: listsWithCounts });
 }
 
 async function handleGetCalendarEvents(input: Record<string, unknown>, ctx: ToolContext): Promise<string> {
@@ -126,7 +191,7 @@ async function handleGenerateSchedule(input: Record<string, unknown>, ctx: ToolC
   for (const slot of slots) {
     if (slot.type === "task" && slot.ref_id) {
       await supabase
-        .from("tasks")
+        .from("items")
         .update({ scheduled_start: slot.start, scheduled_end: slot.end, scheduled_date: date })
         .eq("id", slot.ref_id)
         .eq("user_id", ctx.userId);
@@ -214,7 +279,7 @@ async function handleInsertBreak(input: Record<string, unknown>, ctx: ToolContex
 
 async function handleEstimateTask(input: Record<string, unknown>, ctx: ToolContext): Promise<string> {
   const { data, error } = await supabase
-    .from("tasks")
+    .from("items")
     .update({
       effort: input.effort as string,
       estimated_minutes: input.estimated_minutes as number,
@@ -226,23 +291,23 @@ async function handleEstimateTask(input: Record<string, unknown>, ctx: ToolConte
     .single();
 
   if (error) return JSON.stringify({ error: error.message });
-  return JSON.stringify({ success: true, task: data });
+  return JSON.stringify({ success: true, item: data });
 }
 
 async function handleAutoCheckCompletions(input: Record<string, unknown>, ctx: ToolContext): Promise<string> {
   const date = input.date as string;
   const now = new Date();
 
-  const { data: tasks } = await supabase
-    .from("tasks")
+  const { data: items } = await supabase
+    .from("items")
     .select("*")
     .eq("user_id", ctx.userId)
     .eq("scheduled_date", date)
-    .in("status", ["pending", "in_progress"])
+    .eq("is_completed", false)
     .lt("scheduled_end", now.toISOString());
 
-  if (!tasks || tasks.length === 0) {
-    return JSON.stringify({ message: "No tasks to auto-complete", completed: [] });
+  if (!items || items.length === 0) {
+    return JSON.stringify({ message: "No items to auto-complete", completed: [] });
   }
 
   const { data: events } = await supabase
@@ -253,20 +318,28 @@ async function handleAutoCheckCompletions(input: Record<string, unknown>, ctx: T
     .gte("start_time", `${date}T00:00:00`);
 
   const completedIds: string[] = [];
-  for (const task of tasks) {
+  for (const item of items) {
+    const typedItem = item as { id: string; title: string };
     const relatedEvent = events?.find(
-      (e: any) =>
-        task.title.toLowerCase().includes("prep") ||
-        task.title.toLowerCase().includes(e.title.toLowerCase().split(" ")[0])
+      (e) => {
+        const typedEvent = e as { title: string };
+        return typedItem.title.toLowerCase().includes("prep") ||
+          typedItem.title.toLowerCase().includes(typedEvent.title.toLowerCase().split(" ")[0]);
+      }
     );
     if (relatedEvent) {
+      const typedEvent = relatedEvent as { title: string };
       await supabase
-        .from("tasks")
-        .update({ status: "done", completed_at: now.toISOString(), ai_notes: `Auto-completed: related event "${relatedEvent.title}" has ended` })
-        .eq("id", task.id);
-      completedIds.push(task.id);
+        .from("items")
+        .update({
+          is_completed: true,
+          completed_at: now.toISOString(),
+          ai_notes: `Auto-completed: related event "${typedEvent.title}" has ended`,
+        })
+        .eq("id", typedItem.id);
+      completedIds.push(typedItem.id);
     }
   }
 
-  return JSON.stringify({ message: `Auto-completed ${completedIds.length} tasks`, completed: completedIds });
+  return JSON.stringify({ message: `Auto-completed ${completedIds.length} items`, completed: completedIds });
 }

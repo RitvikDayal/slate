@@ -11,7 +11,7 @@ const anthropic = createAnthropic({
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
-  const { user, supabase, error } = await getAuthenticatedUser();
+  const { user, error } = await getAuthenticatedUser();
   if (error) return error;
 
   const rateLimitError = await checkRateLimit(user!.id, "chat");
@@ -27,45 +27,7 @@ export async function POST(request: Request) {
   }
   const { messages } = body;
 
-  // Load today's context
-  const today = new Date().toISOString().split("T")[0];
-
-  const { data: tasks } = await supabase
-    .from("tasks")
-    .select(
-      "id, title, priority, effort, estimated_minutes, status, is_movable, scheduled_date, scheduled_start, scheduled_end"
-    )
-    .eq("user_id", user!.id)
-    .eq("scheduled_date", today)
-    .order("scheduled_start", { ascending: true, nullsFirst: false });
-
-  const { data: schedule } = await supabase
-    .from("daily_schedules")
-    .select("*")
-    .eq("user_id", user!.id)
-    .eq("date", today)
-    .single();
-
-  const systemMessage = `You are an AI productivity assistant embedded in a todo/planner app. You help users manage their tasks and daily schedule through natural conversation.
-
-Today is ${today}.
-
-**Current tasks:**
-${
-  tasks
-    ?.map(
-      (t: Record<string, unknown>) =>
-        `- [${t.id}] "${t.title}" | ${t.status} | ${t.priority} priority | ${t.scheduled_start ? `${t.scheduled_start} - ${t.scheduled_end}` : "unscheduled"}`
-    )
-    .join("\n") || "No tasks today."
-}
-
-**Current schedule:**
-${schedule ? `Version ${schedule.version}, status: ${schedule.status}, confirmed: ${schedule.user_confirmed}` : "No schedule generated yet."}
-
-Tone: Friendly, concise, action-oriented. When the user makes a request, use tools immediately. Briefly explain what you did.`;
-
-  // Create Supabase admin client for tool implementations
+  // Create Supabase admin client for tool implementations and context queries
   const { createClient: createServiceClient } = await import(
     "@supabase/supabase-js"
   );
@@ -74,114 +36,146 @@ Tone: Friendly, concise, action-oriented. When the user makes a request, use too
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
+  // Load today's context
+  const today = new Date().toISOString().split("T")[0];
+
+  const { data: items } = await adminClient
+    .from("items")
+    .select("id, title, type, priority, effort, estimated_minutes, is_completed, is_movable, scheduled_date, scheduled_start, scheduled_end, list_id")
+    .eq("user_id", user!.id)
+    .eq("is_archived", false)
+    .or(`scheduled_date.eq.${today},due_date.eq.${today}`)
+    .order("position");
+
+  const { data: schedule } = await adminClient
+    .from("daily_schedules")
+    .select("*")
+    .eq("user_id", user!.id)
+    .eq("date", today)
+    .single();
+
+  const systemMessage = `You are an AI productivity assistant embedded in a todo/planner app. You help users manage their items and daily schedule through natural conversation.
+
+Today is ${today}.
+
+**Current items:**
+${
+  items
+    ?.map(
+      (t: Record<string, unknown>) =>
+        `- [${t.id}] "${t.title}" | ${t.is_completed ? "completed" : "active"} | ${t.priority} priority | ${t.scheduled_start ? `${t.scheduled_start} - ${t.scheduled_end}` : "unscheduled"}`
+    )
+    .join("\n") || "No items today."
+}
+
+**Current schedule:**
+${schedule ? `Version ${schedule.version}, status: ${schedule.status}, confirmed: ${schedule.user_confirmed}` : "No schedule generated yet."}
+
+Tone: Friendly, concise, action-oriented. When the user makes a request, use tools immediately. Briefly explain what you did.`;
+
   const result = streamText({
     model: anthropic("claude-sonnet-4-20250514"),
     system: systemMessage,
     messages,
     tools: {
-      createTask: tool({
-        description: "Create a new task",
+      createItem: tool({
+        description: "Create a new task or item",
         inputSchema: z.object({
-          title: z.string().describe("Task title"),
-          priority: z
-            .enum(["low", "medium", "high"])
-            .optional()
-            .describe("Priority level"),
-          scheduled_date: z.string().optional().describe("Date YYYY-MM-DD"),
-          estimated_minutes: z
-            .number()
-            .optional()
-            .describe("Duration estimate"),
+          title: z.string().describe("Item title"),
+          list_id: z.string().uuid().optional().describe("List UUID"),
+          priority: z.enum(["none", "low", "medium", "high"]).optional(),
+          due_date: z.string().optional().describe("Date YYYY-MM-DD"),
+          estimated_minutes: z.number().optional(),
         }),
-        execute: async ({
-          title,
-          priority,
-          scheduled_date,
-          estimated_minutes,
-        }) => {
+        execute: async ({ title, list_id, priority, due_date, estimated_minutes }) => {
+          let targetListId = list_id;
+          if (!targetListId) {
+            const { data: inbox } = await adminClient
+              .from("lists").select("id").eq("user_id", user!.id).eq("is_inbox", true).single();
+            targetListId = inbox?.id;
+          }
           const { data, error: insertError } = await adminClient
-            .from("tasks")
+            .from("items")
             .insert({
               user_id: user!.id,
+              list_id: targetListId,
               title,
-              priority: priority || "medium",
-              scheduled_date: scheduled_date || today,
+              type: "task",
+              priority: priority || "none",
+              due_date: due_date || null,
               estimated_minutes,
               source: "ai_suggested",
             })
             .select()
             .single();
           if (insertError) return { error: insertError.message };
-          return { success: true, task: { id: data.id, title: data.title } };
+          return { success: true, item: { id: data.id, title: data.title } };
         },
       }),
-      completeTask: tool({
-        description: "Mark a task as done",
+      completeItem: tool({
+        description: "Mark an item as done",
         inputSchema: z.object({
-          task_id: z.string().describe("Task UUID"),
+          item_id: z.string().describe("Item UUID"),
         }),
-        execute: async ({ task_id }) => {
+        execute: async ({ item_id }) => {
           const { data, error: updateError } = await adminClient
-            .from("tasks")
+            .from("items")
             .update({
-              status: "done",
+              is_completed: true,
               completed_at: new Date().toISOString(),
             })
-            .eq("id", task_id)
+            .eq("id", item_id)
             .eq("user_id", user!.id)
             .select()
             .single();
           if (updateError) return { error: updateError.message };
-          return { success: true, task: { id: data.id, title: data.title } };
+          return { success: true, item: { id: data.id, title: data.title } };
         },
       }),
-      updateTask: tool({
-        description: "Update task properties",
+      updateItem: tool({
+        description: "Update item properties",
         inputSchema: z.object({
-          task_id: z.string().describe("Task UUID"),
+          item_id: z.string().describe("Item UUID"),
           title: z.string().optional(),
-          priority: z.enum(["low", "medium", "high"]).optional(),
+          priority: z.enum(["none", "low", "medium", "high"]).optional(),
           scheduled_start: z.string().optional(),
           scheduled_end: z.string().optional(),
-          status: z
-            .enum(["pending", "in_progress", "done", "cancelled"])
-            .optional(),
+          is_completed: z.boolean().optional(),
         }),
-        execute: async ({ task_id, ...updates }) => {
+        execute: async ({ item_id, ...updates }) => {
           const cleanUpdates = Object.fromEntries(
             Object.entries(updates).filter(([, v]) => v !== undefined)
           );
           const { data, error: updateError } = await adminClient
-            .from("tasks")
+            .from("items")
             .update(cleanUpdates)
-            .eq("id", task_id)
+            .eq("id", item_id)
             .eq("user_id", user!.id)
             .select()
             .single();
           if (updateError) return { error: updateError.message };
-          return { success: true, task: { id: data.id, title: data.title } };
+          return { success: true, item: { id: data.id, title: data.title } };
         },
       }),
-      getTasks: tool({
-        description: "Get tasks for a date",
+      listItems: tool({
+        description: "Get items for a date",
         inputSchema: z.object({
           date: z.string().describe("Date YYYY-MM-DD"),
-          status: z
-            .enum(["pending", "in_progress", "done", "cancelled"])
-            .optional(),
+          is_completed: z.boolean().optional(),
         }),
-        execute: async ({ date, status: taskStatus }) => {
+        execute: async ({ date, is_completed }) => {
           let query = adminClient
-            .from("tasks")
+            .from("items")
             .select(
-              "id, title, priority, status, scheduled_start, scheduled_end, estimated_minutes"
+              "id, title, type, priority, is_completed, scheduled_start, scheduled_end, estimated_minutes"
             )
             .eq("user_id", user!.id)
-            .eq("scheduled_date", date);
-          if (taskStatus) query = query.eq("status", taskStatus);
+            .eq("is_archived", false)
+            .or(`scheduled_date.eq.${date},due_date.eq.${date}`);
+          if (is_completed !== undefined) query = query.eq("is_completed", is_completed);
           const { data, error: queryError } = await query;
           if (queryError) return { error: queryError.message };
-          return { tasks: data };
+          return { items: data };
         },
       }),
       shuffleSchedule: tool({

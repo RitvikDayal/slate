@@ -60,6 +60,21 @@ export const floatingIcon: Variants = {
   },
 };
 
+/** Panel slide-in from right */
+export const panelEnter: Variants = {
+  hidden: { opacity: 0, x: 24 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: { type: "spring", stiffness: 400, damping: 35 },
+  },
+  exit: {
+    opacity: 0,
+    x: 24,
+    transition: { duration: 0.15 },
+  },
+};
+
 /** Page header fade in from top */
 export const pageHeaderVariants: Variants = {
   hidden: { opacity: 0, y: -8 },

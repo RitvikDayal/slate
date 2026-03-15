@@ -29,14 +29,14 @@ export function NotificationList({
 }: NotificationListProps) {
   return (
     <div>
-      <div className="flex items-center justify-between border-b border-slate-800 px-3 py-2">
+      <div className="flex items-center justify-between border-b border-border px-3 py-2">
         <h3 className="text-sm font-semibold">Notifications</h3>
         <div className="flex gap-1">
           <Button
             variant="ghost"
             size="sm"
             onClick={onMarkAllAsRead}
-            className="text-xs text-slate-400"
+            className="text-xs text-muted-foreground"
           >
             <Check className="mr-1 h-3 w-3" /> Mark all read
           </Button>
@@ -44,7 +44,7 @@ export function NotificationList({
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="h-6 w-6 text-slate-400"
+            className="h-6 w-6 text-muted-foreground"
           >
             <X className="h-3 w-3" />
           </Button>
@@ -53,7 +53,7 @@ export function NotificationList({
 
       <div className="max-h-80 overflow-y-auto">
         {notifications.length === 0 && (
-          <p className="p-4 text-center text-sm text-slate-500">
+          <p className="p-4 text-center text-sm text-muted-foreground">
             No notifications
           </p>
         )}
@@ -61,23 +61,23 @@ export function NotificationList({
           <div
             key={n.id}
             className={cn(
-              "cursor-pointer border-b border-slate-800 px-3 py-2.5 hover:bg-slate-800/50",
-              !n.read_at && "bg-indigo-950/20"
+              "cursor-pointer border-b border-border px-3 py-2.5 hover:bg-muted/50",
+              !n.read_at && "bg-primary/10"
             )}
             onClick={() => !n.read_at && onMarkAsRead(n.id)}
           >
             <div className="flex items-start gap-2">
               {!n.read_at && (
-                <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-indigo-500" />
+                <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
               )}
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">{n.title}</p>
                 {n.body && (
-                  <p className="mt-0.5 truncate text-xs text-slate-400">
+                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
                     {n.body}
                   </p>
                 )}
-                <p className="mt-0.5 text-[10px] text-slate-500">
+                <p className="mt-0.5 text-[10px] text-muted-foreground">
                   {formatDistanceToNow(parseISO(n.created_at), {
                     addSuffix: true,
                   })}
