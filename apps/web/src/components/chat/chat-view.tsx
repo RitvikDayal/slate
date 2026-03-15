@@ -2,6 +2,7 @@
 
 import { useChat } from "@ai-sdk/react";
 import { useEffect, useRef, useState } from "react";
+import { WifiOff } from "lucide-react";
 import { motion } from "framer-motion";
 import { ChatMessage } from "./chat-message";
 import { ChatInput } from "./chat-input";
@@ -37,6 +38,15 @@ function ThinkingDots() {
 }
 
 export function ChatView() {
+  const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
+  useEffect(() => {
+    const on = () => setIsOnline(true);
+    const off = () => setIsOnline(false);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
+  }, []);
+
   const {
     messages,
     sendMessage,
@@ -79,6 +89,18 @@ export function ChatView() {
       sendMessage({ text: lastUserMessage.current });
     }
   };
+
+  if (!isOnline) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+        <WifiOff className="h-10 w-10 text-muted-foreground/30" />
+        <p className="font-medium text-foreground">You&apos;re offline</p>
+        <p className="text-sm text-muted-foreground">
+          Chat will be available when you reconnect.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col">

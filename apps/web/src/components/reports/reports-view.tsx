@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format, subDays, startOfWeek, endOfWeek } from "date-fns";
+import { WifiOff } from "lucide-react";
 import { DailyReportView } from "./daily-report-view";
 import { WeeklyReportView } from "./weekly-report-view";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,15 @@ import { ChevronLeft, ChevronRight, CalendarDays, Calendar } from "lucide-react"
 type ViewMode = "daily" | "weekly";
 
 export function ReportsView() {
+  const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
+  useEffect(() => {
+    const on = () => setIsOnline(true);
+    const off = () => setIsOnline(false);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
+  }, []);
+
   const [viewMode, setViewMode] = useState<ViewMode>("daily");
   const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -28,6 +38,18 @@ export function ReportsView() {
   const dateLabel = viewMode === "daily"
     ? `${format(subDays(currentDate, 6), "MMM d")} - ${format(currentDate, "MMM d, yyyy")}`
     : `Week of ${format(startOfWeek(currentDate, { weekStartsOn: 1 }), "MMM d")} - ${format(endOfWeek(currentDate, { weekStartsOn: 1 }), "MMM d, yyyy")}`;
+
+  if (!isOnline) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+        <WifiOff className="h-10 w-10 text-muted-foreground/30" />
+        <p className="font-medium text-foreground">You&apos;re offline</p>
+        <p className="text-sm text-muted-foreground">
+          Reports will be available when you reconnect.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-4xl p-4 md:p-6">

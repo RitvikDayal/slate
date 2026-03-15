@@ -38,6 +38,7 @@ import type { User } from "@supabase/supabase-js";
 import type { List } from "@ai-todo/shared";
 import { layoutSpring } from "@/lib/animations";
 import { SlateLogo, SlateIcon } from "@/components/brand/slate-logo";
+import { SyncStatus } from "@/components/sync/sync-status";
 
 const presetViews = [
   { slug: "high-priority", label: "High Priority", icon: AlertTriangle, iconColor: "text-red-400" },
@@ -376,11 +377,10 @@ export function Sidebar({ user }: { user: User }) {
       {/* Footer */}
       <div className="border-t border-border p-3">
         {!sidebarCollapsed && (
-          <div className="mb-2 flex items-center justify-between px-1">
-            <p className="truncate text-xs text-muted-foreground">
-              {user.email}
-            </p>
-            <button
+          <div className="mb-2 px-1">
+            <div className="mb-1.5 flex items-center justify-between">
+              <SyncStatus />
+              <button
               type="button"
               onClick={async () => {
                 const { createClient } = await import("@/lib/supabase/client");
@@ -393,6 +393,10 @@ export function Sidebar({ user }: { user: User }) {
             >
               <LogOut className="h-3.5 w-3.5" />
             </button>
+            </div>
+            <p className="truncate text-xs text-muted-foreground">
+              {user.email}
+            </p>
           </div>
         )}
         <button

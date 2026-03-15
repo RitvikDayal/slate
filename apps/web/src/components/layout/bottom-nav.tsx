@@ -19,6 +19,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { CreateTaskModal } from "@/components/tasks/create-task-modal";
 import { useListStore } from "@/stores/list-store";
+import { SyncStatus } from "@/components/sync/sync-status";
 
 const primaryNav = [
   { href: "/inbox", label: "Inbox", icon: Inbox, iconColor: "text-blue-400" },
@@ -230,7 +231,10 @@ export function BottomNav() {
         className="fixed bottom-0 left-0 right-0 z-40 md:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       >
-        <div className="flex items-stretch border-t border-border/60 bg-background/90 backdrop-blur-xl">
+        <div className="relative flex items-stretch border-t border-border/60 bg-background/90 backdrop-blur-xl">
+          <div className="absolute right-2 top-0.5 z-10">
+            <SyncStatus compact />
+          </div>
           {/* Left nav items: Inbox, Today */}
           {primaryNav.slice(0, 2).map((item) => {
             const isActive = pathname.startsWith(item.href);
