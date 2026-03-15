@@ -9,3 +9,8 @@ dist
 # Serwist-generated service worker
 apps/web/public/sw.js
 apps/web/public/sw.js.map
+
+# Claude Code
+CLAUDE.md
+.claude/
+docs/superpowers/

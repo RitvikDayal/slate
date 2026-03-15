@@ -44,7 +44,7 @@ export async function processSlackScan(job: Job<SlackScannerJobData>) {
     // Get channel name for display
     const channelName = await slack.getChannelName(channelId);
 
-    // Analyze messages with Claude
+    // Analyze messages with AI
     const analyses = await analyzeSlackMessages(userId, messages);
 
     // Store suggestions using message_index to map back to original messages

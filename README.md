@@ -4,7 +4,7 @@ An AI-powered daily planner and task manager built for individual professionals 
 
 ## Features
 
-- **AI Task Management** — Intelligent task scheduling, estimation, and daily plan generation powered by Claude
+- **AI Task Management** — Intelligent task scheduling, estimation, and daily plan generation powered by AI
 - **Smart Chat** — Conversational AI assistant for managing tasks, getting insights, and planning your day
 - **Google Calendar Sync** — Two-way calendar integration to plan around your existing commitments
 - **Push Notifications** — Real-time reminders and task alerts via web push
@@ -21,7 +21,7 @@ An AI-powered daily planner and task manager built for individual professionals 
 |-------|-----------|
 | **Frontend** | Next.js 16, React 19, Tailwind CSS v4, shadcn/ui (base-ui) |
 | **Backend** | Next.js API Routes, Supabase (Postgres + Auth + RLS) |
-| **AI** | Vercel AI SDK (streaming chat), Claude SDK (background agent) |
+| **AI** | Vercel AI SDK (streaming chat), AI SDK (background agent) |
 | **Worker** | Node.js, BullMQ, Redis |
 | **Monorepo** | Turborepo, pnpm workspaces |
 
