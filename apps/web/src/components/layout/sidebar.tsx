@@ -13,6 +13,7 @@ import {
   PanelLeft,
   Calendar,
   MessageCircle,
+  LogOut,
   BarChart3,
   GripVertical,
   AlertTriangle,
@@ -373,9 +374,24 @@ export function Sidebar({ user }: { user: User }) {
       {/* Footer */}
       <div className="border-t border-border p-3">
         {!sidebarCollapsed && (
-          <p className="mb-2 truncate px-1 text-xs text-muted-foreground">
-            {user.email}
-          </p>
+          <div className="mb-2 flex items-center justify-between px-1">
+            <p className="truncate text-xs text-muted-foreground">
+              {user.email}
+            </p>
+            <button
+              type="button"
+              onClick={async () => {
+                const { createClient } = await import("@/lib/supabase/client");
+                const supabase = createClient();
+                await supabase.auth.signOut();
+                router.push("/login");
+              }}
+              title="Sign out"
+              className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+            </button>
+          </div>
         )}
         <button
           type="button"

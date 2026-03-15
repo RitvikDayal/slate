@@ -38,6 +38,7 @@ export function QuickAdd({ listId, defaultDueDate }: QuickAddProps) {
   const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
   const [justCreated, setJustCreated] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const { createItem } = useItemStore();
   const lists = useListStore((s) => s.lists);
   const { labels } = useLabelStore();
@@ -107,9 +108,17 @@ export function QuickAdd({ listId, defaultDueDate }: QuickAddProps) {
     [handleSubmit]
   );
 
+  const handleBlur = useCallback((e: React.FocusEvent) => {
+    // If focus moves to another element inside the container, stay open
+    if (containerRef.current?.contains(e.relatedTarget as Node)) return;
+    setIsFocused(false);
+  }, []);
+
   return (
     <div className="px-1 py-2">
       <div
+        ref={containerRef}
+        onBlur={handleBlur}
         className={cn(
           "rounded-xl border transition-colors",
           isFocused
@@ -147,10 +156,6 @@ export function QuickAdd({ listId, defaultDueDate }: QuickAddProps) {
             value={value}
             onChange={(e) => parseInput(e.target.value)}
             onFocus={() => setIsFocused(true)}
-            onBlur={() => {
-              // Delay to allow button clicks
-              setTimeout(() => setIsFocused(false), 200);
-            }}
             onKeyDown={handleKeyDown}
             placeholder="Add a task..."
             className="min-w-0 flex-1 bg-transparent text-[15px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
