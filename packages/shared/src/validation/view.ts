@@ -39,6 +39,7 @@ export const createSavedViewSchema = z.object({
   filters: savedViewFiltersSchema,
   sort_by: z.string().max(50).default("due_date:asc"),
   is_pinned: z.boolean().default(false),
+  position: z.number().optional(),
   updated_at: z.string().datetime().optional(),
 });
 

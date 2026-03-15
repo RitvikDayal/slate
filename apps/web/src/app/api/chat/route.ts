@@ -74,7 +74,7 @@ ${schedule ? `Version ${schedule.version}, status: ${schedule.status}, confirmed
 Tone: Friendly, concise, action-oriented. When the user makes a request, use tools immediately. Briefly explain what you did.`;
 
   const result = streamText({
-    model: openai("gpt-4o-mini"),
+    model: openai.chat("gpt-4o-mini"),
     system: systemMessage,
     messages,
     tools: {

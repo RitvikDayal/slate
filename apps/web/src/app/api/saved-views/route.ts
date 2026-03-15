@@ -33,20 +33,23 @@ export async function POST(request: Request) {
   if (!parsed.success)
     return NextResponse.json({ error: parsed.error.message }, { status: 400 });
 
-  // Get next position
-  const { data: lastView } = await supabase
-    .from("saved_views")
-    .select("position")
-    .eq("user_id", user.id)
-    .order("position", { ascending: false })
-    .limit(1)
-    .single();
+  // Get next position (skip if client provided one)
+  let position = parsed.data.position;
+  if (position === undefined) {
+    const { data: lastView } = await supabase
+      .from("saved_views")
+      .select("position")
+      .eq("user_id", user.id)
+      .order("position", { ascending: false })
+      .limit(1)
+      .single();
 
-  const position = lastView ? lastView.position + 1 : 0;
+    position = lastView ? lastView.position + 1 : 0;
+  }
 
   const { data, error: dbError } = await supabase
     .from("saved_views")
-    .insert({ ...parsed.data, user_id: user.id, position })
+    .upsert({ ...parsed.data, user_id: user.id, position }, { onConflict: "id" })
     .select()
     .single();
 

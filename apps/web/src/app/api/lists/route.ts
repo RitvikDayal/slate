@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.message }, { status: 400 });
   const { data, error: dbError } = await supabase
     .from("lists")
-    .insert({ ...parsed.data, user_id: user.id })
+    .upsert({ ...parsed.data, user_id: user.id }, { onConflict: "id" })
     .select()
     .single();
   if (dbError)

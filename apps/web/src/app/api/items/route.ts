@@ -42,7 +42,7 @@ export async function POST(request: Request) {
   const { label_ids, ...itemData } = parsed.data;
   const { data, error: dbError } = await supabase
     .from("items")
-    .insert({ ...itemData, user_id: user.id })
+    .upsert({ ...itemData, user_id: user.id }, { onConflict: "id" })
     .select()
     .single();
   if (dbError)
