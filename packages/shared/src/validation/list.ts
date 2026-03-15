@@ -1,11 +1,13 @@
 import { z } from "zod";
 
 export const createListSchema = z.object({
+  id: z.string().uuid().optional(),
   title: z.string().min(1).max(200),
   icon: z.string().max(10).optional(),
   color: z.string().max(20).optional(),
   parent_list_id: z.string().uuid().optional(),
   position: z.number().optional(),
+  updated_at: z.string().datetime().optional(),
 });
 
 export const updateListSchema = z.object({
@@ -15,6 +17,7 @@ export const updateListSchema = z.object({
   parent_list_id: z.string().uuid().nullable().optional(),
   position: z.number().optional(),
   is_archived: z.boolean().optional(),
+  updated_at: z.string().datetime().optional(),
 });
 
 export const reorderListsSchema = z.union([

@@ -5,6 +5,7 @@ const itemPrioritySchema = z.enum(["none", "low", "medium", "high"]);
 const itemEffortSchema = z.enum(["xs", "s", "m", "l", "xl"]);
 
 export const createItemSchema = z.object({
+  id: z.string().uuid().optional(),
   list_id: z.string().uuid(),
   parent_item_id: z.string().uuid().optional(),
   type: itemTypeSchema.optional().default("task"),
@@ -20,6 +21,7 @@ export const createItemSchema = z.object({
   source: z.enum(["manual", "slack", "ai_suggested", "gmail"]).optional().default("manual"),
   source_ref: z.record(z.unknown()).optional(),
   label_ids: z.array(z.string().uuid()).optional(),
+  updated_at: z.string().datetime().optional(),
 });
 
 export const updateItemSchema = z.object({
@@ -42,6 +44,7 @@ export const updateItemSchema = z.object({
   ai_notes: z.string().nullable().optional(),
   is_archived: z.boolean().optional(),
   label_ids: z.array(z.string().uuid()).optional(),
+  updated_at: z.string().datetime().optional(),
 });
 
 export const reorderItemsSchema = z.union([

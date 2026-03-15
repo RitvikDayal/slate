@@ -32,16 +32,19 @@ export const filterRuleSchema = z.object({
 export const savedViewFiltersSchema = z.array(filterRuleSchema).max(20);
 
 export const createSavedViewSchema = z.object({
+  id: z.string().uuid().optional(),
   name: z.string().min(1).max(100),
   icon: z.string().max(10).optional(),
   color: z.string().max(20).optional(),
   filters: savedViewFiltersSchema,
   sort_by: z.string().max(50).default("due_date:asc"),
   is_pinned: z.boolean().default(false),
+  updated_at: z.string().datetime().optional(),
 });
 
 export const updateSavedViewSchema = createSavedViewSchema.partial().extend({
   position: z.number().optional(),
+  updated_at: z.string().datetime().optional(),
 });
 
 export type FilterField = z.infer<typeof filterFieldSchema>;

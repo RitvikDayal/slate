@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const createAttachmentSchema = z.object({
+  id: z.string().uuid().optional(),
   type: z.enum(["file", "link"]),
   name: z.string().min(1).max(255),
   url: z.string().url(),

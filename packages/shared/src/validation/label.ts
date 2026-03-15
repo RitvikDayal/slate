@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const createLabelSchema = z.object({
+  id: z.string().uuid().optional(),
   name: z.string().min(1).max(100),
   color: z.string().max(20),
 });
