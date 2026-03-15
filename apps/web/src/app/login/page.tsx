@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
@@ -65,7 +66,21 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-xs text-muted-foreground">
-          By continuing, you agree to our terms of service and privacy policy.
+          By continuing, you agree to our{" "}
+          <Link
+            href="/terms"
+            className="underline underline-offset-4 hover:text-foreground"
+          >
+            terms of service
+          </Link>{" "}
+          and{" "}
+          <Link
+            href="/privacy"
+            className="underline underline-offset-4 hover:text-foreground"
+          >
+            privacy policy
+          </Link>
+          .
         </p>
       </div>
     </div>
