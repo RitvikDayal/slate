@@ -14,6 +14,7 @@ export const JOB_NAMES = {
   NOTIFICATION_DISPATCH: "notification-dispatch",
   SLACK_SCAN: "slack-scan",
   REPORT_INSIGHTS: "report-insights",
+  GMAIL_SCAN: "gmail-scan",
 } as const;
 
 export interface MorningPlanJobData {
@@ -62,4 +63,8 @@ export interface ReportInsightsJobData {
   userId: string;
   startDate: string; // YYYY-MM-DD
   endDate: string;
+}
+
+export interface GmailScanJobData {
+  userId: string;
 }
