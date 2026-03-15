@@ -9,7 +9,6 @@ import {
   Flag,
   Tag,
   ChevronDown,
-  Mic,
   List as ListIcon,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -18,7 +17,8 @@ import { useItemStore } from "@/stores/item-store";
 import { useListStore } from "@/stores/list-store";
 import { useLabelStore } from "@/stores/label-store";
 import { playCreate } from "@/lib/sounds";
-import type { ItemPriority, Label } from "@ai-todo/shared";
+import { VoiceCaptureButton } from "./voice-capture-button";
+import type { ItemPriority } from "@ai-todo/shared";
 
 interface CreateTaskModalProps {
   open: boolean;
@@ -292,15 +292,10 @@ export function CreateTaskModal({ open, onClose, defaultListId }: CreateTaskModa
                   autoCorrect="off"
                   autoCapitalize="sentences"
                 />
-                <button
-                  type="button"
-                  disabled
-                  title="Voice capture coming soon"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-muted-foreground/30 transition-colors"
-                  aria-label="Voice capture coming soon"
-                >
-                  <Mic className="h-5 w-5" />
-                </button>
+                <VoiceCaptureButton
+                  onTranscript={(text) => setTitle(text)}
+                  className="shrink-0"
+                />
               </div>
 
               {/* Metadata chips row */}
