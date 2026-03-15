@@ -49,7 +49,8 @@ Plans are in `docs/superpowers/plans/`:
 - `2026-03-14-ai-todo-phase2-ai-agent.md` — Phase 2 (DONE)
 - `2026-03-14-ai-todo-phase3-calendar-notifications.md` — Phase 3
 - `2026-03-14-ai-todo-phase4-slack-reports.md` — Phase 4
-- `2026-03-15-ai-todo-phase5-completion.md` — Phase 5 (IN PROGRESS)
+- `2026-03-15-ai-todo-phase5-completion.md` — Phase 5 (DONE)
+- Phase 6: Power User Features (DONE) — Task creation modal, attachments, DnD enhancements, voice capture, Slack/Gmail capture, filters & saved views
 
 ## Coding Standards
 
