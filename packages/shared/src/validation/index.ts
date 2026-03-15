@@ -7,3 +7,4 @@ export * from "./list";
 export * from "./item";
 export * from "./label";
 export * from "./attachment";
+export * from "./view";

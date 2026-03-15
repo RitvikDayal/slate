@@ -15,6 +15,12 @@ import {
   MessageCircle,
   BarChart3,
   GripVertical,
+  AlertTriangle,
+  CalendarRange,
+  Clock,
+  CircleSlash,
+  CheckCircle,
+  Filter,
 } from "lucide-react";
 import { useDroppable } from "@dnd-kit/core";
 import {
@@ -26,9 +32,18 @@ import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 import { useListStore } from "@/stores/list-store";
 import { useUIStore } from "@/stores/ui-store";
+import { useViewStore } from "@/stores/view-store";
 import type { User } from "@supabase/supabase-js";
 import type { List } from "@ai-todo/shared";
 import { layoutSpring } from "@/lib/animations";
+
+const presetViews = [
+  { slug: "high-priority", label: "High Priority", icon: AlertTriangle },
+  { slug: "due-this-week", label: "Due This Week", icon: CalendarRange },
+  { slug: "overdue", label: "Overdue", icon: Clock },
+  { slug: "no-date", label: "No Date", icon: CircleSlash },
+  { slug: "completed", label: "Completed", icon: CheckCircle },
+];
 
 const smartLists = [
   { href: "/inbox", label: "Inbox", icon: Inbox },
@@ -129,10 +144,14 @@ export function Sidebar({ user }: { user: User }) {
   const newListInputRef = useRef<HTMLInputElement>(null);
   const { lists, fetchLists, createList } = useListStore();
   const { sidebarCollapsed, toggleSidebarCollapsed } = useUIStore();
+  const { savedViews, fetchSavedViews } = useViewStore();
 
   useEffect(() => {
     fetchLists();
-  }, [fetchLists]);
+    fetchSavedViews();
+  }, [fetchLists, fetchSavedViews]);
+
+  const pinnedViews = savedViews.filter((v) => v.is_pinned);
 
   const userLists = lists.filter((l) => !l.is_inbox && !l.is_archived);
   const userListIds = userLists.map((l) => l.id);
@@ -259,6 +278,93 @@ export function Sidebar({ user }: { user: User }) {
                 />
               </div>
             )}
+          </>
+        )}
+
+        {/* Divider */}
+        <div className="!my-3 h-px bg-border" />
+
+        {/* Filters / Views */}
+        {!sidebarCollapsed && (
+          <p className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+            Filters
+          </p>
+        )}
+        {presetViews.map((view) => {
+          const href = `/views/${view.slug}`;
+          const isActive = pathname === href;
+          return (
+            <Link
+              key={view.slug}
+              href={href}
+              title={view.label}
+              className={cn(
+                "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                sidebarCollapsed && "justify-center px-0",
+                isActive
+                  ? "text-primary"
+                  : "text-muted-foreground hover:bg-muted"
+              )}
+            >
+              {isActive && (
+                <motion.span
+                  layoutId="sidebar-active"
+                  className="absolute inset-0 rounded-lg bg-primary/10"
+                  transition={layoutSpring}
+                />
+              )}
+              <view.icon className="relative h-[18px] w-[18px] shrink-0" />
+              {!sidebarCollapsed && (
+                <span className="relative">{view.label}</span>
+              )}
+            </Link>
+          );
+        })}
+
+        {/* Pinned Saved Views */}
+        {pinnedViews.length > 0 && (
+          <>
+            {!sidebarCollapsed && (
+              <p className="mb-1 mt-3 px-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                Saved Views
+              </p>
+            )}
+            {pinnedViews.map((view) => {
+              const href = `/saved-views/${view.id}`;
+              const isActive = pathname === href;
+              return (
+                <Link
+                  key={view.id}
+                  href={href}
+                  title={view.name}
+                  className={cn(
+                    "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    sidebarCollapsed && "justify-center px-0",
+                    isActive
+                      ? "text-primary"
+                      : "text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  {isActive && (
+                    <motion.span
+                      layoutId="sidebar-active"
+                      className="absolute inset-0 rounded-lg bg-primary/10"
+                      transition={layoutSpring}
+                    />
+                  )}
+                  {view.icon ? (
+                    <span className="relative shrink-0 text-base">
+                      {view.icon}
+                    </span>
+                  ) : (
+                    <Filter className="relative h-[18px] w-[18px] shrink-0" />
+                  )}
+                  {!sidebarCollapsed && (
+                    <span className="relative truncate">{view.name}</span>
+                  )}
+                </Link>
+              );
+            })}
           </>
         )}
       </nav>

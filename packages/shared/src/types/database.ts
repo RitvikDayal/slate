@@ -189,6 +189,24 @@ export interface Attachment {
   updated_at: string;
 }
 
+export interface SavedView {
+  id: string;
+  user_id: string;
+  name: string;
+  icon: string | null;
+  color: string | null;
+  filters: Array<{
+    field: string;
+    op: string;
+    value: string | number | boolean | null;
+  }>;
+  sort_by: string;
+  is_pinned: boolean;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export type ChatRole = "user" | "assistant";
 
 export interface ChatMessage {
