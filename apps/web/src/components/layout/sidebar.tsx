@@ -16,21 +16,13 @@ import {
   BarChart3,
   GripVertical,
 } from "lucide-react";
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
+import { useDroppable } from "@dnd-kit/core";
 import {
   SortableContext,
   verticalListSortingStrategy,
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { cn } from "@/lib/utils";
 import { useListStore } from "@/stores/list-store";
 import { useUIStore } from "@/stores/ui-store";
@@ -59,11 +51,19 @@ function SortableListItem({
   const {
     attributes,
     listeners,
-    setNodeRef,
+    setNodeRef: setSortableRef,
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: list.id });
+  } = useSortable({
+    id: list.id,
+    data: { type: "list", listId: list.id, title: list.title },
+  });
+
+  const { isOver, setNodeRef: setDropRef } = useDroppable({
+    id: `list-drop-${list.id}`,
+    data: { type: "list-drop-target", listId: list.id },
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -72,7 +72,14 @@ function SortableListItem({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="group/list-item relative">
+    <div
+      ref={(node: HTMLDivElement | null) => {
+        setSortableRef(node);
+        setDropRef(node);
+      }}
+      style={style}
+      className="group/list-item relative"
+    >
       <Link
         href={`/list/${list.id}`}
         title={list.title}
@@ -81,7 +88,8 @@ function SortableListItem({
           sidebarCollapsed && "justify-center px-0",
           isActive
             ? "bg-primary/10 text-primary"
-            : "text-muted-foreground hover:bg-muted"
+            : "text-muted-foreground hover:bg-muted",
+          isOver && !isDragging && "ring-2 ring-primary/50 bg-primary/5"
         )}
       >
         {!sidebarCollapsed && (
@@ -119,7 +127,7 @@ export function Sidebar({ user }: { user: User }) {
   const [isCreating, setIsCreating] = useState(false);
   const [newListName, setNewListName] = useState("");
   const newListInputRef = useRef<HTMLInputElement>(null);
-  const { lists, fetchLists, createList, reorderLists } = useListStore();
+  const { lists, fetchLists, createList } = useListStore();
   const { sidebarCollapsed, toggleSidebarCollapsed } = useUIStore();
 
   useEffect(() => {
@@ -128,22 +136,6 @@ export function Sidebar({ user }: { user: User }) {
 
   const userLists = lists.filter((l) => !l.is_inbox && !l.is_archived);
   const userListIds = userLists.map((l) => l.id);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
-  );
-
-  function handleListDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIndex = userListIds.indexOf(active.id as string);
-    const newIndex = userListIds.indexOf(over.id as string);
-    if (oldIndex === -1 || newIndex === -1) return;
-    const newIds = [...userListIds];
-    newIds.splice(oldIndex, 1);
-    newIds.splice(newIndex, 0, active.id as string);
-    reorderLists(newIds);
-  }
 
   return (
     <div
@@ -206,29 +198,22 @@ export function Sidebar({ user }: { user: User }) {
             Lists
           </p>
         )}
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          modifiers={[restrictToVerticalAxis]}
-          onDragEnd={handleListDragEnd}
+        <SortableContext
+          items={userListIds}
+          strategy={verticalListSortingStrategy}
         >
-          <SortableContext
-            items={userListIds}
-            strategy={verticalListSortingStrategy}
-          >
-            {userLists.map((list) => {
-              const isActive = pathname === `/list/${list.id}`;
-              return (
-                <SortableListItem
-                  key={list.id}
-                  list={list}
-                  isActive={isActive}
-                  sidebarCollapsed={sidebarCollapsed}
-                />
-              );
-            })}
-          </SortableContext>
-        </DndContext>
+          {userLists.map((list) => {
+            const isActive = pathname === `/list/${list.id}`;
+            return (
+              <SortableListItem
+                key={list.id}
+                list={list}
+                isActive={isActive}
+                sidebarCollapsed={sidebarCollapsed}
+              />
+            );
+          })}
+        </SortableContext>
 
         {/* New List button */}
         {!sidebarCollapsed && (

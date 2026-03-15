@@ -1,8 +1,14 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Calendar, Flag, Repeat, Tag, Plus, X } from "lucide-react";
+import { Calendar, Flag, Repeat, Tag, Plus, X, GripVertical } from "lucide-react";
 import { format } from "date-fns";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 import { useItemStore } from "@/stores/item-store";
 import { useLabelStore } from "@/stores/label-store";
@@ -19,6 +25,68 @@ const PRIORITY_OPTIONS = [
   { value: "high", label: "High", color: "bg-priority-high" },
 ] as const;
 
+function SortableSubtask({
+  child,
+  toggleComplete,
+}: {
+  child: Item;
+  toggleComplete: (id: string) => Promise<void>;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: child.id,
+    data: { type: "subtask", parentId: child.parent_item_id, title: child.title },
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="group/subtask flex items-center gap-2 py-1"
+    >
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="flex h-4 w-4 shrink-0 cursor-grab items-center justify-center text-muted-foreground opacity-0 transition-opacity group-hover/subtask:opacity-100 active:cursor-grabbing"
+        onClick={(e) => e.preventDefault()}
+      >
+        <GripVertical className="h-3 w-3" />
+      </button>
+      <button
+        type="button"
+        onClick={() => toggleComplete(child.id)}
+        className={cn(
+          "h-4 w-4 shrink-0 rounded border",
+          child.is_completed
+            ? "border-success bg-success"
+            : "border-border"
+        )}
+      />
+      <span
+        className={cn(
+          "text-sm",
+          child.is_completed && "text-muted-foreground line-through"
+        )}
+      >
+        {child.title}
+      </span>
+    </div>
+  );
+}
+
 interface TaskDetailProps {
   item: Item;
 }
@@ -26,13 +94,17 @@ interface TaskDetailProps {
 export function TaskDetail({ item }: TaskDetailProps) {
   const updateItem = useItemStore((s) => s.updateItem);
   const subtasks = useItemStore((s) =>
-    s.items.filter((i) => i.parent_item_id === item.id)
+    s.items
+      .filter((i) => i.parent_item_id === item.id)
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
   );
   const toggleComplete = useItemStore((s) => s.toggleComplete);
   const labels = useLabelStore((s) => s.labels);
   const [title, setTitle] = useState(item.title);
   const [showPriorityMenu, setShowPriorityMenu] = useState(false);
   const [showLabelPicker, setShowLabelPicker] = useState(false);
+
+  const subtaskIds = subtasks.map((s) => s.id);
 
   const handleTitleBlur = useCallback(() => {
     if (title !== item.title) {
@@ -233,28 +305,18 @@ export function TaskDetail({ item }: TaskDetailProps) {
         <p className="mb-2 text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
           Subtasks
         </p>
-        {subtasks.map((child) => (
-          <div key={child.id} className="flex items-center gap-2 py-1">
-            <button
-              type="button"
-              onClick={() => toggleComplete(child.id)}
-              className={cn(
-                "h-4 w-4 shrink-0 rounded border",
-                child.is_completed
-                  ? "border-success bg-success"
-                  : "border-border"
-              )}
+        <SortableContext
+          items={subtaskIds}
+          strategy={verticalListSortingStrategy}
+        >
+          {subtasks.map((child) => (
+            <SortableSubtask
+              key={child.id}
+              child={child}
+              toggleComplete={toggleComplete}
             />
-            <span
-              className={cn(
-                "text-sm",
-                child.is_completed && "text-muted-foreground line-through"
-              )}
-            >
-              {child.title}
-            </span>
-          </div>
-        ))}
+          ))}
+        </SortableContext>
         <SubtaskInput parentId={item.id} listId={item.list_id} />
       </div>
 
