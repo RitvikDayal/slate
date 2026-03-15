@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import type { List, CreateListInput, UpdateListInput } from "@ai-todo/shared";
+import { mutateLocal, generateId, listToApiPayload } from "@/lib/offline-mutation";
 import { db, toLocalList, fromLocalList } from "@/lib/db";
 
 interface ListStore {
@@ -55,43 +56,79 @@ export const useListStore = create<ListStore>((set, get) => ({
   },
 
   createList: async (data) => {
-    const res = await fetch("/api/lists", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+    const id = generateId();
+    const now = new Date().toISOString();
+    const newList: List = {
+      id,
+      user_id: "",
+      title: data.title,
+      icon: data.icon ?? null,
+      color: data.color ?? null,
+      position: data.position ?? get().lists.length,
+      parent_list_id: data.parent_list_id ?? null,
+      is_inbox: false,
+      is_archived: false,
+      created_at: now,
+      updated_at: now,
+    };
+    set((state) => ({ lists: [...state.lists, newList] }));
+    await mutateLocal({
+      entity: "list",
+      operation: "create",
+      entityId: id,
+      data: listToApiPayload(newList as unknown as Record<string, unknown>),
+      dexieWrite: () => db.lists.put(toLocalList(newList)),
     });
-    if (!res.ok) throw new Error("Failed to create list");
-    const list: List = await res.json();
-    set((state) => ({ lists: [...state.lists, list] }));
-    return list;
+    return newList;
   },
 
   updateList: async (id, data) => {
-    const res = await fetch(`/api/lists/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error("Failed to update list");
-    const updated: List = await res.json();
+    const prev = get().lists.find((l) => l.id === id);
+    if (!prev) return;
+    const now = new Date().toISOString();
+    const updated: List = { ...prev, ...data, updated_at: now };
     set((state) => ({
       lists: state.lists.map((l) => (l.id === id ? updated : l)),
     }));
+    await mutateLocal({
+      entity: "list",
+      operation: "update",
+      entityId: id,
+      data: listToApiPayload(updated as unknown as Record<string, unknown>),
+      dexieWrite: () => db.lists.put(toLocalList(updated)),
+    });
   },
 
   deleteList: async (id) => {
-    const res = await fetch(`/api/lists/${id}`, { method: "DELETE" });
-    if (res.ok) {
-      set((state) => ({
-        lists: state.lists.filter((l) => l.id !== id),
-        selectedListId: state.selectedListId === id ? null : state.selectedListId,
-      }));
-    }
+    set((state) => ({
+      lists: state.lists.filter((l) => l.id !== id),
+      selectedListId: state.selectedListId === id ? null : state.selectedListId,
+    }));
+    await mutateLocal({
+      entity: "list",
+      operation: "delete",
+      entityId: id,
+      data: {},
+      dexieWrite: async () => {
+        await db.lists.delete(id);
+        // Cascade: remove pending sync entries for items in this list
+        const childEntries = await db.syncQueue
+          .where("entity")
+          .equals("item")
+          .filter(
+            (e) =>
+              e.status === "pending" &&
+              (e.data as Record<string, unknown>).list_id === id
+          )
+          .toArray();
+        for (const entry of childEntries) {
+          if (entry.id !== undefined) await db.syncQueue.delete(entry.id);
+        }
+      },
+    });
   },
 
   reorderLists: async (orderedIds) => {
-    const prevLists = get().lists;
-
     set((state) => {
       const listMap = new Map(state.lists.map((l) => [l.id, l]));
       const reordered = orderedIds
@@ -101,16 +138,22 @@ export const useListStore = create<ListStore>((set, get) => ({
       return { lists: [...reordered, ...remaining] };
     });
 
-    try {
-      const res = await fetch("/api/lists/reorder", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderedIds }),
-      });
-      if (!res.ok) throw new Error("Reorder failed");
-    } catch {
-      set({ lists: prevLists });
-    }
+    await mutateLocal({
+      entity: "list",
+      operation: "reorder",
+      entityId: "lists",
+      data: { orderedIds },
+      dexieWrite: async () => {
+        // Update positions in Dexie
+        const lists = get().lists;
+        for (let i = 0; i < lists.length; i++) {
+          const list = lists[i];
+          if (list) {
+            await db.lists.update(list.id, { position: i });
+          }
+        }
+      },
+    });
   },
 
   setSelectedList: (id) => set({ selectedListId: id }),

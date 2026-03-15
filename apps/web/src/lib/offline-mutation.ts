@@ -58,7 +58,7 @@ interface MutateLocalParams {
   operation: SyncQueueEntry["operation"];
   entityId: string;
   data: Record<string, unknown>;
-  dexieWrite: () => Promise<void>;
+  dexieWrite: () => Promise<unknown>;
 }
 
 export async function mutateLocal({

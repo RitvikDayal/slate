@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { Calendar, Flag, Repeat, Tag, Plus, X, GripVertical } from "lucide-react";
+import { Calendar, Flag, Repeat, Tag, Plus, X, GripVertical, List as ListIcon, Check } from "lucide-react";
 import { format } from "date-fns";
 import {
   SortableContext,
@@ -11,6 +11,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 import { useItemStore } from "@/stores/item-store";
+import { useListStore } from "@/stores/list-store";
 import { useLabelStore } from "@/stores/label-store";
 import { RichEditor } from "@/components/editor/rich-editor";
 import { DatePicker } from "@/components/date/date-picker";
@@ -94,6 +95,7 @@ interface TaskDetailProps {
 
 export function TaskDetail({ item }: TaskDetailProps) {
   const updateItem = useItemStore((s) => s.updateItem);
+  const moveItem = useItemStore((s) => s.moveItem);
   const allItems = useItemStore((s) => s.items);
   const subtasks = useMemo(
     () =>
@@ -103,10 +105,14 @@ export function TaskDetail({ item }: TaskDetailProps) {
     [allItems, item.id]
   );
   const toggleComplete = useItemStore((s) => s.toggleComplete);
+  const lists = useListStore((s) => s.lists);
   const labels = useLabelStore((s) => s.labels);
   const [title, setTitle] = useState(item.title);
   const [showPriorityMenu, setShowPriorityMenu] = useState(false);
   const [showLabelPicker, setShowLabelPicker] = useState(false);
+  const [showListPicker, setShowListPicker] = useState(false);
+
+  const currentList = lists.find((l) => l.id === item.list_id);
 
   const subtaskIds = subtasks.map((s) => s.id);
 
@@ -148,6 +154,66 @@ export function TaskDetail({ item }: TaskDetailProps) {
 
       {/* Metadata chips */}
       <div className="flex flex-wrap items-center gap-2 px-6 py-3">
+        {/* List picker */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => {
+              setShowListPicker(!showListPicker);
+              setShowPriorityMenu(false);
+              setShowLabelPicker(false);
+            }}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors",
+              showListPicker
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <ListIcon className="h-3.5 w-3.5" />
+            {currentList?.title ?? "No list"}
+          </button>
+          {showListPicker && (
+            <div className="absolute left-0 top-full z-50 mt-1 w-48 rounded-lg border border-border bg-popover p-1 shadow-lg">
+              {lists
+                .filter((l) => !l.is_archived)
+                .map((list) => (
+                  <button
+                    key={list.id}
+                    type="button"
+                    onClick={() => {
+                      if (list.id !== item.list_id) {
+                        moveItem(item.id, { target_list_id: list.id });
+                      }
+                      setShowListPicker(false);
+                    }}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-sm transition-colors",
+                      list.id === item.list_id
+                        ? "bg-primary/10 text-primary"
+                        : "text-foreground hover:bg-muted"
+                    )}
+                  >
+                    {list.icon ? (
+                      <span className="shrink-0 text-sm">{list.icon}</span>
+                    ) : (
+                      <span
+                        className="h-2 w-2 shrink-0 rounded-full"
+                        style={{
+                          backgroundColor: list.color || "var(--color-muted-foreground)",
+                        }}
+                      />
+                    )}
+                    <span className="truncate">{list.title}</span>
+                    {list.id === item.list_id && (
+                      <Check className="ml-auto h-3.5 w-3.5 text-primary" />
+                    )}
+                  </button>
+                ))}
+            </div>
+          )}
+        </div>
+
         {/* Due date */}
         <DatePicker
           value={item.due_date}

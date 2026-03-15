@@ -8,6 +8,7 @@ import type {
   MoveItemInput,
 } from "@ai-todo/shared";
 import { db, toLocalItem, fromLocalItem } from "@/lib/db";
+import { mutateLocal, generateId, itemToApiPayload } from "@/lib/offline-mutation";
 
 interface ItemStore {
   items: Item[];
@@ -139,108 +140,151 @@ export const useItemStore = create<ItemStore>((set, get) => ({
   },
 
   createItem: async (data) => {
-    const res = await fetch("/api/items", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+    const id = generateId();
+    const now = new Date().toISOString();
+    const newItem: Item = {
+      id,
+      list_id: data.list_id,
+      user_id: "", // will be set by server
+      parent_item_id: data.parent_item_id ?? null,
+      type: data.type ?? "task",
+      title: data.title ?? "",
+      content_json: data.content_json ?? null,
+      is_completed: false,
+      completed_at: null,
+      due_date: data.due_date ?? null,
+      due_time: data.due_time ?? null,
+      reminder_at: null,
+      recurrence_rule: data.recurrence_rule ?? null,
+      priority: data.priority ?? "none",
+      effort: data.effort ?? null,
+      estimated_minutes: data.estimated_minutes ?? null,
+      position: data.position ?? get().items.length,
+      is_movable: true,
+      source: data.source ?? "manual",
+      source_ref: data.source_ref ?? null,
+      scheduled_date: null,
+      scheduled_start: null,
+      scheduled_end: null,
+      ai_notes: null,
+      is_archived: false,
+      created_at: now,
+      updated_at: now,
+      labels: [],
+    };
+
+    set((state) => ({ items: [...state.items, newItem] }));
+
+    await mutateLocal({
+      entity: "item",
+      operation: "create",
+      entityId: id,
+      data: { ...itemToApiPayload(newItem as unknown as Record<string, unknown>), label_ids: data.label_ids },
+      dexieWrite: async () => {
+        await db.items.put(toLocalItem(newItem));
+        if (data.label_ids?.length) {
+          await db.itemLabels.bulkPut(data.label_ids.map((lid) => ({ itemId: id, labelId: lid })));
+        }
+      },
     });
-    if (!res.ok) throw new Error("Failed to create item");
-    const item: Item = await res.json();
-    set((state) => ({ items: [...state.items, item] }));
-    return item;
+
+    return newItem;
   },
 
   updateItem: async (id, data) => {
-    const res = await fetch(`/api/items/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+    const now = new Date().toISOString();
+    const item = get().items.find((i) => i.id === id);
+    if (!item) return;
+    const updated = { ...item, ...data, updated_at: now };
+    set((state) => ({ items: state.items.map((i) => (i.id === id ? updated : i)) }));
+
+    await mutateLocal({
+      entity: "item",
+      operation: "update",
+      entityId: id,
+      data: { ...data, updated_at: now },
+      dexieWrite: async () => { await db.items.put(toLocalItem(updated)); },
     });
-    if (!res.ok) throw new Error("Failed to update item");
-    const updated: Item = await res.json();
-    set((state) => ({
-      items: state.items.map((i) => (i.id === id ? updated : i)),
-    }));
   },
 
   toggleComplete: async (id) => {
     const item = get().items.find((i) => i.id === id);
     if (!item) return;
     const isCompleted = !item.is_completed;
-    // Optimistic update
-    set((state) => ({
-      items: state.items.map((i) =>
-        i.id === id
-          ? {
-              ...i,
-              is_completed: isCompleted,
-              completed_at: isCompleted ? new Date().toISOString() : null,
-            }
-          : i
-      ),
-    }));
-    const res = await fetch(`/api/items/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        is_completed: isCompleted,
-      }),
-    });
-    if (!res.ok) {
-      // Revert on failure
-      set((state) => ({
-        items: state.items.map((i) => (i.id === id ? item : i)),
-      }));
-    }
-  },
+    const now = new Date().toISOString();
+    const updated = {
+      ...item,
+      is_completed: isCompleted,
+      completed_at: isCompleted ? now : null,
+      updated_at: now,
+    };
 
-  deleteItem: async (id) => {
-    const res = await fetch(`/api/items/${id}`, { method: "DELETE" });
-    if (res.ok) {
-      set((state) => ({
-        items: state.items.filter((i) => i.id !== id),
-        selectedItemId: state.selectedItemId === id ? null : state.selectedItemId,
-      }));
-    }
-  },
-
-  reorderItems: async (listId, orderedIds) => {
-    const prevItems = get().items;
-
-    set((state) => {
-      const itemMap = new Map(state.items.map((i) => [i.id, i]));
-      const reordered = orderedIds
-        .map((id) => itemMap.get(id))
-        .filter((i): i is Item => i !== undefined);
-      const remaining = state.items.filter(
-        (i) => i.list_id !== listId || !orderedIds.includes(i.id)
-      );
-      return { items: [...reordered, ...remaining] };
-    });
-
-    try {
-      const res = await fetch("/api/items/reorder", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ list_id: listId, orderedIds }),
-      });
-      if (!res.ok) throw new Error("Reorder failed");
-    } catch {
-      set({ items: prevItems });
-    }
-  },
-
-  moveItem: async (id, data) => {
-    const res = await fetch(`/api/items/${id}/move`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error("Failed to move item");
-    const updated: Item = await res.json();
     set((state) => ({
       items: state.items.map((i) => (i.id === id ? updated : i)),
     }));
+
+    await mutateLocal({
+      entity: "item",
+      operation: "update",
+      entityId: id,
+      data: { is_completed: isCompleted, updated_at: now },
+      dexieWrite: async () => { await db.items.put(toLocalItem(updated)); },
+    });
+  },
+
+  deleteItem: async (id) => {
+    set((state) => ({
+      items: state.items.filter((i) => i.id !== id),
+      selectedItemId: state.selectedItemId === id ? null : state.selectedItemId,
+    }));
+
+    await mutateLocal({
+      entity: "item",
+      operation: "delete",
+      entityId: id,
+      data: {},
+      dexieWrite: async () => { await db.items.delete(id); },
+    });
+  },
+
+  reorderItems: async (listId, orderedIds) => {
+    set((state) => {
+      const itemMap = new Map(state.items.map((i) => [i.id, i]));
+      const reordered = orderedIds.map((oid) => itemMap.get(oid)).filter((i): i is Item => i !== undefined);
+      const remaining = state.items.filter((i) => i.list_id !== listId || !orderedIds.includes(i.id));
+      return { items: [...reordered, ...remaining] };
+    });
+
+    await mutateLocal({
+      entity: "item",
+      operation: "reorder",
+      entityId: listId,
+      data: { list_id: listId, orderedIds },
+      dexieWrite: async () => {
+        for (let i = 0; i < orderedIds.length; i++) {
+          await db.items.update(orderedIds[i], { position: i });
+        }
+      },
+    });
+  },
+
+  moveItem: async (id, data) => {
+    const item = get().items.find((i) => i.id === id);
+    if (!item) return;
+    const now = new Date().toISOString();
+    const updated = { ...item, list_id: data.target_list_id, updated_at: now };
+
+    set((state) => ({
+      items: state.items.map((i) => (i.id === id ? updated : i)),
+    }));
+
+    await mutateLocal({
+      entity: "item",
+      operation: "move",
+      entityId: id,
+      data: { target_list_id: data.target_list_id, position: data.position },
+      dexieWrite: async () => { await db.items.put(toLocalItem(updated)); },
+    });
   },
 
   setSelectedItem: (id) => set({ selectedItemId: id }),

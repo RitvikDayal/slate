@@ -38,7 +38,7 @@ const fadeIn = {
 };
 
 export function AttachmentsSection({ itemId }: AttachmentsSectionProps) {
-  const { attachments, isLoading, fetchAttachments, addAttachment, deleteAttachment } =
+  const { attachments, isLoading, fetchAttachments, addAttachment, addLink, deleteAttachment } =
     useAttachmentStore();
   const [isDragOver, setIsDragOver] = useState(false);
   const [showLinkInput, setShowLinkInput] = useState(false);
@@ -73,15 +73,7 @@ export function AttachmentsSection({ itemId }: AttachmentsSectionProps) {
         for (let i = 0; i < fileList.length; i++) {
           const file = fileList[i];
           if (!file) continue;
-          // Create a placeholder URL (real upload would go to Supabase Storage)
-          const placeholderUrl = `attachment://${file.name}`;
-          await addAttachment(itemId, {
-            type: "file",
-            name: file.name,
-            url: placeholderUrl,
-            mime_type: file.type || "application/octet-stream",
-            size_bytes: file.size,
-          });
+          await addAttachment(itemId, file);
         }
       } catch {
         // Error handled by store
@@ -134,7 +126,7 @@ export function AttachmentsSection({ itemId }: AttachmentsSectionProps) {
       const url = new URL(
         linkUrl.startsWith("http") ? linkUrl : `https://${linkUrl}`
       );
-      void addAttachment(itemId, {
+      void addLink(itemId, {
         type: "link",
         name: url.hostname,
         url: url.toString(),
@@ -144,7 +136,7 @@ export function AttachmentsSection({ itemId }: AttachmentsSectionProps) {
     } catch {
       // Invalid URL — ignore
     }
-  }, [linkUrl, itemId, addAttachment]);
+  }, [linkUrl, itemId, addLink]);
 
   const handleDelete = useCallback(
     (attachmentId: string) => {
