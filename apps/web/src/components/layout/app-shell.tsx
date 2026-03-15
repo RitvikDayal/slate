@@ -44,9 +44,9 @@ export function AppShell({
   const [activeItem, setActiveItem] = useState<DragItem | null>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 10 } }),
     useSensor(TouchSensor, {
-      activationConstraint: { delay: 250, tolerance: 5 },
+      activationConstraint: { delay: 200, tolerance: 8 },
     })
   );
 

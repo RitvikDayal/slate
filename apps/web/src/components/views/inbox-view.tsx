@@ -16,15 +16,11 @@ export function InboxView() {
   const inbox = getInbox();
 
   useEffect(() => {
-    if (lists.length === 0) {
-      fetchLists();
-    }
+    if (lists.length === 0) fetchLists();
   }, [lists.length, fetchLists]);
 
   useEffect(() => {
-    if (inbox?.id) {
-      fetchItemsByList(inbox.id);
-    }
+    if (inbox?.id) fetchItemsByList(inbox.id);
   }, [inbox?.id, fetchItemsByList]);
 
   const activeItems = items.filter((i) => !i.is_completed);

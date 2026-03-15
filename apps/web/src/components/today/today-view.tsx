@@ -22,11 +22,8 @@ export function TodayView() {
 
   useEffect(() => {
     fetchTodayItems();
-  }, [fetchTodayItems]);
-
-  useEffect(() => {
     if (lists.length === 0) fetchLists();
-  }, [lists.length, fetchLists]);
+  }, [fetchTodayItems, lists.length, fetchLists]);
 
   const inbox = getInbox();
   const scheduledItems = items.filter((i) => i.scheduled_start && !i.is_completed);

@@ -188,6 +188,7 @@ export function Sidebar({ user }: { user: User }) {
             <Link
               key={item.href}
               href={item.href}
+              prefetch
               title={item.label}
               className={cn(
                 "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
@@ -299,6 +300,7 @@ export function Sidebar({ user }: { user: User }) {
             <Link
               key={view.slug}
               href={href}
+              prefetch
               title={view.label}
               className={cn(
                 "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
