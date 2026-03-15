@@ -1,0 +1,10 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Light variant: deeper purple for use on light backgrounds -->
+  <!-- Back plane -->
+  <rect x="16" y="24" width="160" height="128" rx="24" fill="#7c3aed" opacity="0.5"/>
+  <!-- Front plane -->
+  <rect x="80" y="104" width="160" height="128" rx="24" fill="#7c3aed"/>
+  <!-- Writing lines -->
+  <rect x="120" y="152" width="80" height="12" rx="6" fill="#ffffff" opacity="0.7"/>
+  <rect x="120" y="184" width="56" height="12" rx="6" fill="#ffffff" opacity="0.4"/>
+</svg>
