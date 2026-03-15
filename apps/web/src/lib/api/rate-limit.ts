@@ -2,38 +2,40 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { NextResponse } from "next/server";
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-});
+function getRedis() {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token || url === "change-me") return null;
+  return new Redis({ url, token });
+}
 
-const chatLimiter = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(30, "1 m"),
-  analytics: true,
-  prefix: "ratelimit:chat",
-});
-
-const taskLimiter = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(60, "1 m"),
-  analytics: true,
-  prefix: "ratelimit:tasks",
-});
-
-const calendarLimiter = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(5, "1 m"),
-  analytics: true,
-  prefix: "ratelimit:calendar",
-});
+function getLimiter(prefix: string, requests: number) {
+  const redis = getRedis();
+  if (!redis) return null;
+  return new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(requests, "1 m"),
+    analytics: true,
+    prefix,
+  });
+}
 
 export async function checkRateLimit(
   userId: string,
   type: "chat" | "tasks" | "calendar" = "chat"
 ): Promise<NextResponse | null> {
-  const limiters = { chat: chatLimiter, tasks: taskLimiter, calendar: calendarLimiter };
-  const limiter = limiters[type];
+  const configs = {
+    chat: { prefix: "ratelimit:chat", requests: 30 },
+    tasks: { prefix: "ratelimit:tasks", requests: 60 },
+    calendar: { prefix: "ratelimit:calendar", requests: 5 },
+  } as const;
+
+  const config = configs[type];
+  const limiter = getLimiter(config.prefix, config.requests);
+
+  // Skip rate limiting if Redis is not configured
+  if (!limiter) return null;
+
   const { success, limit, remaining, reset } = await limiter.limit(userId);
 
   if (!success) {
