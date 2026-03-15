@@ -29,7 +29,7 @@ export function AppShell({
     const unregN = registerShortcut({
       key: "n",
       handler: () => {
-        window.dispatchEvent(new CustomEvent("focus-quick-add"));
+        window.dispatchEvent(new CustomEvent("open-create-modal"));
       },
       description: "New task",
     });
