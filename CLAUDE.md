@@ -1,4 +1,4 @@
-# AI Todo App — Claude Code Instructions
+# Slate — Claude Code Instructions
 
 ## Project Structure
 

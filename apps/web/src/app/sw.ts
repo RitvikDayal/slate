@@ -25,7 +25,7 @@ self.addEventListener("push", (event: PushEvent) => {
   const data = event.data?.json() ?? {};
   const { title, body, url, tag } = data;
   event.waitUntil(
-    self.registration.showNotification(title || "AI Todo", {
+    self.registration.showNotification(title || "Slate", {
       body: body || "",
       icon: "/icons/icon-192.png",
       badge: "/icons/icon-192.png",

@@ -9,7 +9,7 @@ export async function sendEmail(params: {
 }): Promise<void> {
   await resend.emails.send({
     from:
-      process.env.EMAIL_FROM || "AI Todo <notifications@yourdomain.com>",
+      process.env.EMAIL_FROM || "Slate <notifications@yourdomain.com>",
     to: params.to,
     subject: params.subject,
     html: params.html,

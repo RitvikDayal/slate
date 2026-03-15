@@ -25,7 +25,7 @@ function baseLayout(title: string, content: string): string {
         </td></tr>
         <tr><td style="padding:16px 32px;border-top:1px solid ${COLORS.border};">
           <p style="margin:0;font-size:12px;color:${COLORS.textMuted};text-align:center;">
-            AI Todo &mdash; Your intelligent task manager
+            Slate &mdash; Your intelligent task manager
           </p>
         </td></tr>
       </table>

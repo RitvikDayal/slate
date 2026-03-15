@@ -164,7 +164,7 @@ export function Sidebar({ user }: { user: User }) {
       <div className="flex h-14 items-center px-4">
         {!sidebarCollapsed && (
           <h1 className="text-lg font-bold tracking-tight text-foreground">
-            AI Todo
+            Slate
           </h1>
         )}
       </div>

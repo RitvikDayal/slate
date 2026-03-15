@@ -1,6 +1,6 @@
 {
-  "name": "AI Todo",
-  "short_name": "AI Todo",
+  "name": "Slate",
+  "short_name": "Slate",
   "description": "AI-powered daily planner and task manager",
   "start_url": "/today",
   "display": "standalone",

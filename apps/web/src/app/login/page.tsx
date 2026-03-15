@@ -28,7 +28,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center">
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            AI Todo
+            Slate
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Your AI-powered daily planner

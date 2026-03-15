@@ -13,7 +13,7 @@ import { processCalendarSync } from "./jobs/calendar-sync";
 import { processNotificationDispatch } from "./jobs/notification-dispatcher";
 import { startCronScheduler } from "./cron/scheduler";
 
-console.log("Starting AI Todo Worker...");
+console.log("Starting Slate Worker...");
 
 const aiWorker = new Worker(
   QUEUE_NAMES.AI,
