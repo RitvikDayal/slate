@@ -17,7 +17,7 @@ export const createItemSchema = z.object({
   estimated_minutes: z.number().int().positive().optional(),
   recurrence_rule: z.string().optional(),
   position: z.number().optional(),
-  source: z.enum(["manual", "slack", "ai_suggested"]).optional().default("manual"),
+  source: z.enum(["manual", "slack", "ai_suggested", "gmail"]).optional().default("manual"),
   source_ref: z.record(z.unknown()).optional(),
   label_ids: z.array(z.string().uuid()).optional(),
 });

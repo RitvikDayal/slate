@@ -4,8 +4,10 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Hash, ChevronDown, ChevronUp } from "lucide-react";
+import { Check, X, Hash, ChevronDown, ChevronUp, Inbox } from "lucide-react";
 import type { SlackTaskSuggestion } from "@ai-todo/shared";
+import { useItemStore } from "@/stores/item-store";
+import { useListStore } from "@/stores/list-store";
 
 const priorityColors: Record<string, string> = {
   high: "bg-destructive/10 text-destructive",
@@ -25,6 +27,10 @@ export function SuggestionCard({
   const [expanded, setExpanded] = useState(false);
   const [accepting, setAccepting] = useState(false);
   const [dismissing, setDismissing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const { createItem } = useItemStore();
+  const { getInbox } = useListStore();
 
   const handleAccept = async () => {
     setAccepting(true);
@@ -43,6 +49,31 @@ export function SuggestionCard({
       setDismissing(false);
     }
   };
+
+  const handleSaveToInbox = async () => {
+    const inboxList = getInbox();
+    if (!inboxList) return;
+    setSaving(true);
+    try {
+      await createItem({
+        list_id: inboxList.id,
+        title: suggestion.suggested_title || suggestion.message_text.slice(0, 100),
+        type: "task",
+        priority: suggestion.suggested_priority ?? "none",
+        source: "slack",
+        source_ref: {
+          channel_id: suggestion.channel_id,
+          channel_name: suggestion.channel_name,
+          message_ts: suggestion.message_ts,
+        },
+      });
+      setSaved(true);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const busy = accepting || dismissing || saving;
 
   return (
     <Card className="border-border bg-card p-4">
@@ -81,8 +112,18 @@ export function SuggestionCard({
           <Button
             size="icon-sm"
             variant="ghost"
+            onClick={handleSaveToInbox}
+            disabled={busy || saved}
+            className="text-primary hover:bg-primary/10 hover:text-primary"
+            title="Save to Inbox"
+          >
+            <Inbox className="h-4 w-4" />
+          </Button>
+          <Button
+            size="icon-sm"
+            variant="ghost"
             onClick={handleAccept}
-            disabled={accepting || dismissing}
+            disabled={busy}
             className="text-success hover:bg-success/10 hover:text-success"
           >
             <Check className="h-4 w-4" />
@@ -91,7 +132,7 @@ export function SuggestionCard({
             size="icon-sm"
             variant="ghost"
             onClick={handleDismiss}
-            disabled={accepting || dismissing}
+            disabled={busy}
             className="text-destructive hover:bg-destructive/10 hover:text-destructive"
           >
             <X className="h-4 w-4" />

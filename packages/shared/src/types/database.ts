@@ -110,7 +110,7 @@ export interface DailyReport {
 export type ItemType = "task" | "note" | "heading";
 export type ItemPriority = "none" | "low" | "medium" | "high";
 export type ItemEffort = "xs" | "s" | "m" | "l" | "xl";
-export type ItemSource = "manual" | "slack" | "ai_suggested";
+export type ItemSource = "manual" | "slack" | "ai_suggested" | "gmail";
 
 export interface List {
   id: string;
