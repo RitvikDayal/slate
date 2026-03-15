@@ -107,6 +107,23 @@ export interface DailyReport {
   created_at: string;
 }
 
+export type AttachmentType = "file" | "link";
+
+export interface Attachment {
+  id: string;
+  item_id: string;
+  user_id: string;
+  type: AttachmentType;
+  name: string;
+  url: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  thumbnail_url: string | null;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export type ChatRole = "user" | "assistant";
 
 export interface ChatMessage {
