@@ -9,6 +9,7 @@ import { useLabelStore } from "@/stores/label-store";
 import { RichEditor } from "@/components/editor/rich-editor";
 import { DatePicker } from "@/components/date/date-picker";
 import { RecurrencePicker } from "@/components/date/recurrence-picker";
+import { AttachmentsSection } from "@/components/tasks/attachments-section";
 import "@/styles/editor.css";
 import type { Item } from "@ai-todo/shared";
 
@@ -227,6 +228,9 @@ export function TaskDetail({ item }: TaskDetailProps) {
           onUpdate={handleContentUpdate}
         />
       </div>
+
+      {/* Attachments */}
+      <AttachmentsSection itemId={item.id} />
 
       {/* Subtasks */}
       <div className="border-t border-border px-6 py-3">
