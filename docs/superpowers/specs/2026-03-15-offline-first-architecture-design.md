@@ -46,8 +46,8 @@ updated_at: z.string().datetime().optional(),
 When present, the API route passes them through to Supabase insert. When absent (non-offline callers), Supabase generates defaults as before. This is backward-compatible.
 
 **Affected validation files:**
-- `packages/shared/src/validation/item.ts` — `createItemSchema`, `updateItemSchema` (add `updated_at`)
-- `packages/shared/src/validation/list.ts` — `createListSchema`, `updateListSchema`
+- `packages/shared/src/validation/item.ts` — `createItemSchema` (add `id`, `updated_at`), `updateItemSchema` (add `updated_at`)
+- `packages/shared/src/validation/list.ts` — `createListSchema` (add `id`, `updated_at`), `updateListSchema` (add `updated_at`)
 - `packages/shared/src/validation/label.ts` — `createLabelSchema`
 - `packages/shared/src/validation/view.ts` — `createSavedViewSchema`, `updateSavedViewSchema`
 - `packages/shared/src/validation/attachment.ts` — `createAttachmentSchema` (add `id`)
@@ -70,17 +70,17 @@ savedViews: "id, userId, updatedAt"
 ```
 Fields: `id`, `userId`, `name`, `icon`, `filters` (JSON), `sort`, `isPinned`, `position`, `updatedAt`.
 
-**`attachmentMeta`** — Metadata cache for attachments (not the file content).
+**`attachmentMeta`** — Full attachment metadata cache (mirrors the `Attachment` database type, same approach as LocalItem).
 ```
 attachmentMeta: "id, itemId, createdAt"
 ```
-Fields: `id`, `itemId`, `fileName`, `mimeType`, `size`, `url` (null until synced), `createdAt`.
+Fields: `id`, `itemId`, `userId`, `type`, `name`, `url` (null until synced), `mimeType`, `sizeBytes`, `thumbnailUrl`, `position`, `createdAt`, `updatedAt`.
 
 **`pendingAttachments`** — Blob storage for files queued for upload.
 ```
 pendingAttachments: "id, itemId, status, createdAt"
 ```
-Fields: `id`, `itemId`, `fileName`, `mimeType`, `size`, `blob` (File object), `status` ("pending" | "uploading" | "failed"), `createdAt`, `retryCount`.
+Fields: `id`, `itemId`, `fileName`, `mimeType`, `size`, `blob` (Blob object — not File, for reliable structured cloning), `status` ("pending" | "uploading" | "failed"), `createdAt`, `retryCount`.
 
 ### Enhanced Table
 
@@ -88,7 +88,7 @@ Fields: `id`, `itemId`, `fileName`, `mimeType`, `size`, `blob` (File object), `s
 ```
 syncQueue: "++id, entity, entityId, operation, status, timestamp, nextRetryAt"
 ```
-New fields: `status` ("pending" | "processing" | "failed"), `retryCount` (default 0), `nextRetryAt` (ISO string, for backoff scheduling), `error` (last error message, nullable).
+New fields: `status` ("pending" | "processing" | "failed"), `retryCount` (default 0), `nextRetryAt` (ISO string, for backoff scheduling), `error` (last error message, nullable). The `entity` union type in `SyncQueueEntry` must also be expanded to include `"savedView"` and `"attachment"`.
 
 ### Expanded Local Types
 
@@ -232,7 +232,8 @@ Core loop:
   - `item` → `/api/items` (POST/PATCH/DELETE)
   - `list` → `/api/lists` (POST/PATCH/DELETE)
   - `label` → `/api/labels` (POST/DELETE)
-  - `itemLabel` → `/api/items/{itemId}/labels` (POST/DELETE) — parse `itemId` and `labelId` from compound entityId
+  - `itemLabel` + `create` → POST `/api/items/{itemId}/labels` with body `{ labelId }` — parse both from compound entityId `{itemId}:{labelId}`
+  - `itemLabel` + `delete` → DELETE `/api/items/{itemId}/labels/{labelId}` — parse both from compound entityId
   - `savedView` → `/api/saved-views` (POST/PATCH/DELETE)
   - `attachment` → see Attachment Handling section below
 
@@ -250,7 +251,13 @@ Core loop:
 **Conflict detection (replaces 409 handling):**
 API routes don't return 409. Instead, use conditional updates:
 - For **creates**: API routes use Supabase `.upsert()` with `onConflict: "id"` — if the ID already exists (e.g., retry after partial success), the row is updated rather than duplicated.
-- For **updates**: The sync engine includes `updated_at` in the PATCH payload. The API route adds `.eq("updated_at", data.updated_at)` to the update query as an optimistic lock. If 0 rows are affected (server version is newer), the API returns `{ conflict: true, current: <server row> }`. The sync engine overwrites local Dexie + Zustand state with the server version (last-write-wins, server wins ties).
+- For **updates**: The sync engine includes `updated_at` in the PATCH payload. API PATCH handler modification:
+  1. Remove `.single()` from the Supabase update query
+  2. Add `.eq("updated_at", data.updated_at)` as a conditional filter (optimistic lock)
+  3. Check if `data.length === 0` (no rows matched = server version is newer)
+  4. If conflict: fetch current row via `.select().eq("id", id).single()`, return `{ conflict: true, current: <server row> }` with HTTP 200
+  5. If success: return the updated row as normal
+  The sync engine checks for `conflict: true` in the response. If found, overwrites local Dexie + Zustand state with `current` (last-write-wins, server wins ties).
 - For **deletes**: No conflict handling needed — deleting an already-deleted item is a no-op.
 
 **On 4xx (client error):**
@@ -306,6 +313,8 @@ All mutations become optimistic via `mutateLocal()`. Revert logic is removed.
 
 `createItem` currently returns the server-created `Item`. With offline-first, it returns a locally-constructed `Item` with client UUID and sensible defaults (`created_at = now`, `updated_at = now`, `position = items.length`). Callers already use the returned object — the interface stays the same.
 
+**Note on `label_ids`:** When creating an item offline with `label_ids`, the store must also write to `db.itemLabels` for each label ID so labels appear in the UI before sync. The sync engine sends `label_ids` in the create payload, and the API handles junction table inserts server-side.
+
 ### List Store
 
 | Operation | Change |
@@ -357,7 +366,7 @@ The existing attachment API (`/api/items/{id}/attachments`) accepts JSON with a 
 4. Sync engine processes the pending attachment:
    - **Step 1:** Upload blob to Supabase Storage (`supabase.storage.from("attachments").upload(path, blob)`)
    - **Step 2:** Get the public URL from the upload response
-   - **Step 3:** POST metadata to `/api/items/{id}/attachments` with `{ id, url, file_name, mime_type, size }`
+   - **Step 3:** POST metadata to `/api/items/{id}/attachments` with `{ id, type: "file", name, url, mime_type, size_bytes }`
 5. On success: delete blob from `pendingAttachments`, update `attachmentMeta.url` with the storage URL
 6. On failure: exponential backoff, same as other queue entries
 
