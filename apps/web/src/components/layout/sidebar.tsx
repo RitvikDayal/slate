@@ -36,6 +36,7 @@ import { useViewStore } from "@/stores/view-store";
 import type { User } from "@supabase/supabase-js";
 import type { List } from "@ai-todo/shared";
 import { layoutSpring } from "@/lib/animations";
+import { SlateLogo, SlateIcon } from "@/components/brand/slate-logo";
 
 const presetViews = [
   { slug: "high-priority", label: "High Priority", icon: AlertTriangle },
@@ -162,10 +163,10 @@ export function Sidebar({ user }: { user: User }) {
     >
       {/* Logo */}
       <div className="flex h-14 items-center px-4">
-        {!sidebarCollapsed && (
-          <h1 className="text-lg font-bold tracking-tight text-foreground">
-            Slate
-          </h1>
+        {sidebarCollapsed ? (
+          <SlateIcon size={22} />
+        ) : (
+          <SlateLogo size="md" />
         )}
       </div>
 

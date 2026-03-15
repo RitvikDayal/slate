@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { SlateLogo } from "@/components/brand/slate-logo";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -27,10 +28,8 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="mx-auto w-full max-w-sm space-y-8 px-4">
         {/* Logo */}
-        <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            Slate
-          </h1>
+        <div className="flex flex-col items-center text-center">
+          <SlateLogo size="xl" />
           <p className="mt-2 text-sm text-muted-foreground">
             Your AI-powered daily planner
           </p>
