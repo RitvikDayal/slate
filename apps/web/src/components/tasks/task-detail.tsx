@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Calendar, Flag, Repeat, Tag, Plus, X, GripVertical } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -94,10 +94,13 @@ interface TaskDetailProps {
 
 export function TaskDetail({ item }: TaskDetailProps) {
   const updateItem = useItemStore((s) => s.updateItem);
-  const subtasks = useItemStore((s) =>
-    s.items
-      .filter((i) => i.parent_item_id === item.id)
-      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+  const allItems = useItemStore((s) => s.items);
+  const subtasks = useMemo(
+    () =>
+      allItems
+        .filter((i) => i.parent_item_id === item.id)
+        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0)),
+    [allItems, item.id]
   );
   const toggleComplete = useItemStore((s) => s.toggleComplete);
   const labels = useLabelStore((s) => s.labels);
