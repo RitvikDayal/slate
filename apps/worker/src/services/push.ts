@@ -1,10 +1,15 @@
 import webpush from "web-push";
 
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT || "mailto:notifications@yourdomain.com",
-  process.env.VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
+const vapidPublicKey = process.env.VAPID_PUBLIC_KEY;
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+
+if (vapidPublicKey && vapidPrivateKey) {
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT || "mailto:notifications@yourdomain.com",
+    vapidPublicKey,
+    vapidPrivateKey
+  );
+}
 
 export class SubscriptionExpiredError extends Error {
   constructor() {
@@ -17,6 +22,10 @@ export async function sendPushNotification(
   subscription: webpush.PushSubscription,
   payload: { title: string; body: string; url?: string; tag?: string }
 ): Promise<void> {
+  if (!vapidPublicKey || !vapidPrivateKey) {
+    console.warn("VAPID keys not configured — skipping push notification");
+    return;
+  }
   try {
     await webpush.sendNotification(subscription, JSON.stringify(payload));
   } catch (err: unknown) {
