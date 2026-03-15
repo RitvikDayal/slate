@@ -14,13 +14,25 @@ export async function POST(request: Request) {
   const parsed = reorderItemsSchema.safeParse(body);
   if (!parsed.success)
     return NextResponse.json({ error: parsed.error.message }, { status: 400 });
-  const updates = parsed.data.orderedIds.map((id, index) =>
-    supabase
-      .from("items")
-      .update({ position: index })
-      .eq("id", id)
-      .eq("user_id", user.id)
-  );
+
+  const data = parsed.data;
+  const updates =
+    "orderedIds" in data
+      ? data.orderedIds.map((id, index) =>
+          supabase
+            .from("items")
+            .update({ position: index })
+            .eq("id", id)
+            .eq("user_id", user.id)
+        )
+      : data.items.map(({ id, position }) =>
+          supabase
+            .from("items")
+            .update({ position })
+            .eq("id", id)
+            .eq("user_id", user.id)
+        );
+
   await Promise.all(updates);
   return NextResponse.json({ success: true });
 }

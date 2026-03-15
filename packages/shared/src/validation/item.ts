@@ -44,10 +44,21 @@ export const updateItemSchema = z.object({
   label_ids: z.array(z.string().uuid()).optional(),
 });
 
-export const reorderItemsSchema = z.object({
-  list_id: z.string().uuid(),
-  orderedIds: z.array(z.string().uuid()),
-});
+export const reorderItemsSchema = z.union([
+  z.object({
+    list_id: z.string().uuid(),
+    orderedIds: z.array(z.string().uuid()),
+  }),
+  z.object({
+    list_id: z.string().uuid(),
+    items: z.array(
+      z.object({
+        id: z.string().uuid(),
+        position: z.number(),
+      })
+    ),
+  }),
+]);
 
 export const moveItemSchema = z.object({
   target_list_id: z.string().uuid(),

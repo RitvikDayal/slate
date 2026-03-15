@@ -17,9 +17,19 @@ export const updateListSchema = z.object({
   is_archived: z.boolean().optional(),
 });
 
-export const reorderListsSchema = z.object({
-  orderedIds: z.array(z.string().uuid()),
-});
+export const reorderListsSchema = z.union([
+  z.object({
+    orderedIds: z.array(z.string().uuid()),
+  }),
+  z.object({
+    items: z.array(
+      z.object({
+        id: z.string().uuid(),
+        position: z.number(),
+      })
+    ),
+  }),
+]);
 
 export type CreateListInput = z.infer<typeof createListSchema>;
 export type UpdateListInput = z.infer<typeof updateListSchema>;
