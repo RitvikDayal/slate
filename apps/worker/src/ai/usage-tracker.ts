@@ -1,4 +1,4 @@
-import { redis } from "../lib/redis";
+import { redis } from "../lib/redis.ts";
 
 const DAILY_INPUT_TOKEN_LIMIT = 100_000;
 const DAILY_OUTPUT_TOKEN_LIMIT = 50_000;

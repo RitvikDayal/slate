@@ -1,6 +1,7 @@
 {
   "name": "@ai-todo/worker",
   "version": "0.0.1",
+  "type": "module",
   "private": true,
   "scripts": {
     "dev": "tsx watch src/index.ts",

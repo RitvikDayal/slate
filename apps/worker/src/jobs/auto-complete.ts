@@ -1,5 +1,5 @@
 import { Job } from "bullmq";
-import { handleToolCall } from "../ai/tool-handlers";
+import { handleToolCall } from "../ai/tool-handlers.ts";
 import type { AutoCompleteJobData } from "@ai-todo/shared";
 
 export async function processAutoComplete(

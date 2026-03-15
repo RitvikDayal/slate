@@ -1,10 +1,10 @@
 import { Job } from "bullmq";
 import type { CalendarSyncJobData } from "@ai-todo/shared";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../lib/supabase.ts";
 import {
   GoogleCalendarService,
   TokenRefreshError,
-} from "../services/google-calendar";
+} from "../services/google-calendar.ts";
 
 export async function processCalendarSync(
   job: Job<CalendarSyncJobData>

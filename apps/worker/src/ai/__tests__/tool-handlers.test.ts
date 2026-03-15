@@ -16,8 +16,8 @@ vi.mock("../../lib/supabase", () => ({
   },
 }));
 
-import { handleToolCall } from "../tool-handlers";
-import { supabase } from "../../lib/supabase";
+import { handleToolCall } from "../tool-handlers.ts";
+import { supabase } from "../../lib/supabase.ts";
 
 describe("handleToolCall", () => {
   beforeEach(() => {

@@ -1,6 +1,6 @@
 import { CronJob } from "cron";
-import { supabase } from "../lib/supabase";
-import { aiQueue, notificationQueue } from "../queues/index";
+import { supabase } from "../lib/supabase.ts";
+import { aiQueue, notificationQueue } from "../queues/index.ts";
 import { JOB_NAMES } from "@ai-todo/shared";
 
 export function startCronScheduler() {

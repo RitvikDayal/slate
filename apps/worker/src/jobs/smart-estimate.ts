@@ -1,8 +1,8 @@
 import { Job } from "bullmq";
-import { runAgent } from "../ai/agent";
-import { SYSTEM_PROMPTS } from "../ai/prompts";
-import { INTELLIGENCE_TOOLS } from "../ai/tool-definitions";
-import { trackUsage, checkBudget } from "../ai/usage-tracker";
+import { runAgent } from "../ai/agent.ts";
+import { SYSTEM_PROMPTS } from "../ai/prompts.ts";
+import { INTELLIGENCE_TOOLS } from "../ai/tool-definitions.ts";
+import { trackUsage, checkBudget } from "../ai/usage-tracker.ts";
 import type { SmartEstimateJobData } from "@ai-todo/shared";
 
 export async function processSmartEstimate(

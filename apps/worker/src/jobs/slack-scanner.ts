@@ -1,8 +1,8 @@
 import { Job } from "bullmq";
-import { supabase } from "../lib/supabase";
-import { SlackService } from "../services/slack";
-import { analyzeSlackMessages } from "../ai/slack-analyzer";
-import { redis } from "../lib/redis";
+import { supabase } from "../lib/supabase.ts";
+import { SlackService } from "../services/slack.ts";
+import { analyzeSlackMessages } from "../ai/slack-analyzer.ts";
+import { redis } from "../lib/redis.ts";
 import type { SlackScannerJobData, SlackMessage } from "@ai-todo/shared";
 
 export async function processSlackScan(job: Job<SlackScannerJobData>) {

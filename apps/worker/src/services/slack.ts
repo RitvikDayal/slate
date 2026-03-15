@@ -1,5 +1,5 @@
 import { WebClient, type ConversationsHistoryResponse } from "@slack/web-api";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../lib/supabase.ts";
 import type { SlackMessage } from "@ai-todo/shared";
 
 export class SlackService {

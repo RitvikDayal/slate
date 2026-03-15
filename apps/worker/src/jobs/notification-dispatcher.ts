@@ -1,10 +1,10 @@
 import { Job } from "bullmq";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../lib/supabase.ts";
 import {
   sendPushNotification,
   SubscriptionExpiredError,
-} from "../services/push";
-import { sendEmail } from "../services/email";
+} from "../services/push.ts";
+import { sendEmail } from "../services/email.ts";
 import type { NotificationDispatchJobData } from "@ai-todo/shared";
 
 export async function processNotificationDispatch(

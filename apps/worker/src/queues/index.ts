@@ -1,5 +1,5 @@
 import { Queue } from "bullmq";
-import { redis } from "../lib/redis";
+import { redis } from "../lib/redis.ts";
 import { QUEUE_NAMES } from "@ai-todo/shared";
 
 export const aiQueue = new Queue(QUEUE_NAMES.AI, {

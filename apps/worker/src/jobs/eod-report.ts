@@ -1,10 +1,10 @@
 import { Job } from "bullmq";
-import { runAgent } from "../ai/agent";
-import { SYSTEM_PROMPTS } from "../ai/prompts";
-import { EOD_TOOLS } from "../ai/tool-definitions";
-import { trackUsage } from "../ai/usage-tracker";
-import { supabase } from "../lib/supabase";
-import { renderEodReportEmail } from "../services/email-templates";
+import { runAgent } from "../ai/agent.ts";
+import { SYSTEM_PROMPTS } from "../ai/prompts.ts";
+import { EOD_TOOLS } from "../ai/tool-definitions.ts";
+import { trackUsage } from "../ai/usage-tracker.ts";
+import { supabase } from "../lib/supabase.ts";
+import { renderEodReportEmail } from "../services/email-templates.ts";
 import type { EodReportJobData } from "@ai-todo/shared";
 
 export async function processEodReport(job: Job<EodReportJobData>) {

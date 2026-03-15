@@ -1,9 +1,9 @@
 import { Job } from "bullmq";
-import { runAgent } from "../ai/agent";
-import { SYSTEM_PROMPTS } from "../ai/prompts";
-import { MORNING_PLAN_TOOLS } from "../ai/tool-definitions";
-import { trackUsage, checkBudget } from "../ai/usage-tracker";
-import { supabase } from "../lib/supabase";
+import { runAgent } from "../ai/agent.ts";
+import { SYSTEM_PROMPTS } from "../ai/prompts.ts";
+import { MORNING_PLAN_TOOLS } from "../ai/tool-definitions.ts";
+import { trackUsage, checkBudget } from "../ai/usage-tracker.ts";
+import { supabase } from "../lib/supabase.ts";
 import type { ScheduleShuffleJobData } from "@ai-todo/shared";
 
 export async function processScheduleShuffle(

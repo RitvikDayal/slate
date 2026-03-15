@@ -1,7 +1,7 @@
 import { Job } from "bullmq";
-import { supabase } from "../lib/supabase";
-import { runAgent } from "../ai/agent";
-import { trackUsage } from "../ai/usage-tracker";
+import { supabase } from "../lib/supabase.ts";
+import { runAgent } from "../ai/agent.ts";
+import { trackUsage } from "../ai/usage-tracker.ts";
 import type { ReportInsightsJobData } from "@ai-todo/shared";
 import type { ChatCompletionTool } from "openai/resources/chat/completions";
 

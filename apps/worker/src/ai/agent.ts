@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { handleToolCall } from "./tool-handlers";
+import { handleToolCall } from "./tool-handlers.ts";
 import type { ChatCompletionTool } from "openai/resources/chat/completions";
 
 if (!process.env.OPENAI_API_KEY) {

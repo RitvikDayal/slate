@@ -1,6 +1,6 @@
 import OpenAI from "openai";
-import { trackUsage } from "./usage-tracker";
-import { SYSTEM_PROMPTS } from "./prompts";
+import { trackUsage } from "./usage-tracker.ts";
+import { SYSTEM_PROMPTS } from "./prompts.ts";
 import type { SlackMessage, SlackAnalysisResult } from "@ai-todo/shared";
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });

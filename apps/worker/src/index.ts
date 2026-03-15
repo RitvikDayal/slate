@@ -1,17 +1,17 @@
 import "dotenv/config";
 import { Worker } from "bullmq";
-import { createRedisConnection } from "./lib/redis";
+import { createRedisConnection } from "./lib/redis.ts";
 import { QUEUE_NAMES, JOB_NAMES } from "@ai-todo/shared";
-import { processMorningPlan } from "./jobs/morning-plan";
-import { processScheduleShuffle } from "./jobs/schedule-shuffler";
-import { processEodReport } from "./jobs/eod-report";
-import { processSmartEstimate } from "./jobs/smart-estimate";
-import { processAutoComplete } from "./jobs/auto-complete";
-import { processSlackScan } from "./jobs/slack-scanner";
-import { processReportInsights } from "./jobs/report-insights";
-import { processCalendarSync } from "./jobs/calendar-sync";
-import { processNotificationDispatch } from "./jobs/notification-dispatcher";
-import { startCronScheduler } from "./cron/scheduler";
+import { processMorningPlan } from "./jobs/morning-plan.ts";
+import { processScheduleShuffle } from "./jobs/schedule-shuffler.ts";
+import { processEodReport } from "./jobs/eod-report.ts";
+import { processSmartEstimate } from "./jobs/smart-estimate.ts";
+import { processAutoComplete } from "./jobs/auto-complete.ts";
+import { processSlackScan } from "./jobs/slack-scanner.ts";
+import { processReportInsights } from "./jobs/report-insights.ts";
+import { processCalendarSync } from "./jobs/calendar-sync.ts";
+import { processNotificationDispatch } from "./jobs/notification-dispatcher.ts";
+import { startCronScheduler } from "./cron/scheduler.ts";
 
 console.log("Starting Slate Worker...");
 
